@@ -1,0 +1,211 @@
+---
+title: Barrier
+description: Synchronization barrier that waits until a specified number of tasks arrive
+---
+
+A synchronization barrier that waits until a specified number of tasks have called `wait`. Once the capacity is reached, all waiting tasks are released simultaneously.
+
+## Constructor
+
+```typescript
+const barrier = new Barrier(capacity: number);
+```
+
+### Parameters
+
+<ParamField path="capacity" type="number" required>
+  The number of tasks that must reach the barrier before all are released. Must be at least 1.
+</ParamField>
+
+### Throws
+
+- `RangeError` if capacity is less than 1
+
+## Methods
+
+### wait
+
+Waits until the required number of tasks have reached the barrier.
+
+```typescript
+wait(signal?: AbortSignal): Promise<void>
+```
+
+#### Parameters
+
+<ParamField path="signal" type="AbortSignal">
+  Optional AbortSignal to cancel waiting.
+</ParamField>
+
+#### Returns
+
+<ResponseField type="Promise<void>">
+  A promise that resolves when all tasks have reached the barrier.
+</ResponseField>
+
+#### Throws
+
+- `AbortError` if the signal is aborted while waiting
+
+## Examples
+
+### Basic synchronization
+
+```typescript
+import { Barrier } from '@temelj/async';
+
+const barrier = new Barrier(3);
+const results: number[] = [];
+
+// Launch three tasks
+const tasks = [1, 2, 3].map(async (n) => {
+  console.log(`Task ${n} started`);
+  
+  // Wait for all tasks to reach this point
+  await barrier.wait();
+  
+  console.log(`Task ${n} continuing`);
+  results.push(n);
+});
+
+await Promise.all(tasks);
+console.log('All tasks completed:', results);
+```
+
+### Coordinating parallel initialization
+
+```typescript
+import { Barrier } from '@temelj/async';
+
+const barrier = new Barrier(3);
+
+class Worker {
+  constructor(private id: number) {}
+  
+  async initialize() {
+    // Each worker does its own setup
+    console.log(`Worker ${this.id} initializing...`);
+    await this.loadConfig();
+    
+    // Wait for all workers to finish initialization
+    await barrier.wait();
+    
+    // Now all workers can start processing
+    console.log(`Worker ${this.id} ready to process`);
+    return this.process();
+  }
+  
+  private async loadConfig() {
+    await delay(Math.random() * 100);
+  }
+  
+  private async process() {
+    return `Worker ${this.id} result`;
+  }
+}
+
+const workers = [new Worker(1), new Worker(2), new Worker(3)];
+const results = await Promise.all(workers.map(w => w.initialize()));
+```
+
+### Multi-phase computation
+
+```typescript
+import { Barrier } from '@temelj/async';
+
+const phase1Barrier = new Barrier(2);
+const phase2Barrier = new Barrier(2);
+
+async function computeTask(data: number[]) {
+  // Phase 1: Initial processing
+  const phase1Result = data.map(x => x * 2);
+  console.log('Phase 1 complete');
+  
+  // Wait for all tasks to complete phase 1
+  await phase1Barrier.wait();
+  
+  // Phase 2: Second processing (only starts after all tasks finish phase 1)
+  const phase2Result = phase1Result.map(x => x + 10);
+  console.log('Phase 2 complete');
+  
+  // Wait for all tasks to complete phase 2
+  await phase2Barrier.wait();
+  
+  return phase2Result;
+}
+
+const results = await Promise.all([
+  computeTask([1, 2, 3]),
+  computeTask([4, 5, 6]),
+]);
+```
+
+### With abort signal
+
+```typescript
+import { Barrier } from '@temelj/async';
+
+const barrier = new Barrier(5);
+const controller = new AbortController();
+
+const task = async () => {
+  try {
+    console.log('Waiting at barrier...');
+    await barrier.wait(controller.signal);
+    console.log('Barrier released');
+  } catch (error) {
+    if (error instanceof AbortError) {
+      console.log('Wait cancelled');
+    }
+  }
+};
+
+// Start tasks
+const tasks = Array.from({ length: 3 }, task);
+
+// Cancel after timeout
+setTimeout(() => {
+  console.log('Timeout - cancelling wait');
+  controller.abort();
+}, 1000);
+
+await Promise.allSettled(tasks);
+```
+
+### Game start synchronization
+
+```typescript
+import { Barrier } from '@temelj/async';
+
+class GameLobby {
+  private startBarrier: Barrier;
+  
+  constructor(private playerCount: number) {
+    this.startBarrier = new Barrier(playerCount);
+  }
+  
+  async playerReady(playerId: string) {
+    console.log(`Player ${playerId} is ready`);
+    
+    // Wait for all players to be ready
+    await this.startBarrier.wait();
+    
+    console.log(`Game starting for player ${playerId}!`);
+    return this.startGame(playerId);
+  }
+  
+  private async startGame(playerId: string) {
+    // Game logic here
+    return `${playerId} playing`;
+  }
+}
+
+const lobby = new GameLobby(4);
+
+await Promise.all([
+  lobby.playerReady('Alice'),
+  lobby.playerReady('Bob'),
+  lobby.playerReady('Charlie'),
+  lobby.playerReady('Diana'),
+]);
+```

@@ -1,0 +1,127 @@
+---
+title: attempt
+description: Safely executes a function and wraps its result in a Promise
+---
+
+Safely executes a function (synchronous or asynchronous) and wraps its result in a Promise. Optionally respects an AbortSignal.
+
+## Signature
+
+```typescript
+function attempt<T, Args extends unknown[]>(
+  fn: (...args: Args) => T | PromiseLike<T>,
+  args?: Args,
+  options?: StandardOptions,
+): Promise<T>
+```
+
+## Parameters
+
+<ParamField path="fn" type="(...args: Args) => T | PromiseLike<T>" required>
+  The function to execute. Can be synchronous or asynchronous.
+</ParamField>
+
+<ParamField path="args" type="Args">
+  Arguments to pass to the function. Defaults to an empty array.
+</ParamField>
+
+<ParamField path="options" type="StandardOptions">
+  Execution options.
+  
+  <Expandable title="properties">
+    <ParamField path="signal" type="AbortSignal">
+      Optional AbortSignal to cancel the operation.
+    </ParamField>
+  </Expandable>
+</ParamField>
+
+## Returns
+
+<ResponseField type="Promise<T>">
+  A promise that resolves with the result of the function.
+</ResponseField>
+
+## Throws
+
+- `AbortError` if the signal is aborted before or after execution
+- Any error thrown by the function
+
+## Examples
+
+### Execute a synchronous function
+
+```typescript
+import { attempt } from '@temelj/async';
+
+const result = await attempt(() => {
+  return 42;
+});
+
+console.log(result); // 42
+```
+
+### Execute an async function
+
+```typescript
+import { attempt } from '@temelj/async';
+
+const result = await attempt(async () => {
+  const data = await fetchData();
+  return data;
+});
+```
+
+### Pass arguments to the function
+
+```typescript
+import { attempt } from '@temelj/async';
+
+function add(a: number, b: number) {
+  return a + b;
+}
+
+const result = await attempt(add, [5, 3]);
+console.log(result); // 8
+```
+
+### With abort signal
+
+```typescript
+import { attempt } from '@temelj/async';
+
+const controller = new AbortController();
+
+const promise = attempt(
+  async () => {
+    await delay(1000);
+    return 'completed';
+  },
+  [],
+  { signal: controller.signal }
+);
+
+// Cancel the operation
+controller.abort();
+
+try {
+  await promise;
+} catch (error) {
+  if (error instanceof AbortError) {
+    console.log('Operation cancelled');
+  }
+}
+```
+
+### Error handling
+
+```typescript
+import { attempt } from '@temelj/async';
+
+try {
+  const result = await attempt(() => {
+    throw new Error('Something went wrong');
+  });
+} catch (error) {
+  console.error('Function failed:', error);
+}
+```

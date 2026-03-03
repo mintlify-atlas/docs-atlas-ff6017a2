@@ -1,0 +1,152 @@
+---
+title: Accessibility functions
+description: Calculate color luminance and contrast ratios for WCAG compliance
+---
+
+Utilities for calculating color accessibility metrics according to WCAG standards.
+
+## getLuminance
+
+Calculates the relative luminance of an RGB color according to WCAG 2.0 specifications.
+
+```typescript
+function getLuminance(color: Color): number
+```
+
+### Parameters
+
+<ParamField path="color" type="Color" required>
+  The RGB color to calculate luminance for. Must have `red`, `green`, and `blue` properties (0-255).
+</ParamField>
+
+### Returns
+
+<ResponseField name="luminance" type="number">
+  The relative luminance value in the range [0, 1], where 0 represents the darkest possible color (black) and 1 represents the lightest (white).
+</ResponseField>
+
+### Example
+
+```typescript
+import { getLuminance, fromRgb } from '@temelj/color';
+
+const whiteLuminance = getLuminance(fromRgb(255, 255, 255));
+// 1.0
+
+const blackLuminance = getLuminance(fromRgb(0, 0, 0));
+// 0.0
+
+const redLuminance = getLuminance(fromRgb(255, 0, 0));
+// 0.2126
+
+const greenLuminance = getLuminance(fromRgb(0, 255, 0));
+// 0.7152
+
+const blueLuminance = getLuminance(fromRgb(0, 0, 255));
+// 0.0722
+```
+
+### Technical details
+
+The luminance calculation follows the WCAG 2.0 specification:
+
+1. RGB values are normalized to the range [0, 1]
+2. Each channel is linearized using the sRGB transfer function
+3. The final luminance is calculated as: `0.2126 * R + 0.7152 * G + 0.0722 * B`
+
+See: [WCAG 2.0 Relative Luminance Definition](https://www.w3.org/TR/WCAG20/#relativeluminancedef)
+
+## getContrastRatio
+
+Calculates the contrast ratio between two RGB colors according to WCAG 2.0 specifications.
+
+```typescript
+function getContrastRatio(a: Color, b: Color): number
+```
+
+### Parameters
+
+<ParamField path="a" type="Color" required>
+  The first RGB color. Must have `red`, `green`, and `blue` properties (0-255).
+</ParamField>
+
+<ParamField path="b" type="Color" required>
+  The second RGB color. Must have `red`, `green`, and `blue` properties (0-255).
+</ParamField>
+
+### Returns
+
+<ResponseField name="ratio" type="number">
+  The contrast ratio in the range [1, 21], where 1 represents no contrast (same colors) and 21 represents maximum contrast (black and white).
+</ResponseField>
+
+### Example
+
+```typescript
+import { getContrastRatio, fromRgb } from '@temelj/color';
+
+const white = fromRgb(255, 255, 255);
+const black = fromRgb(0, 0, 0);
+const red = fromRgb(255, 0, 0);
+
+const maxContrast = getContrastRatio(white, black);
+// 21.0 (maximum possible contrast)
+
+const noContrast = getContrastRatio(white, white);
+// 1.0 (no contrast)
+
+const whiteRedContrast = getContrastRatio(white, red);
+// 3.998
+```
+
+### WCAG contrast requirements
+
+The WCAG 2.0 defines minimum contrast ratios for text accessibility:
+
+**Level AA (minimum)**
+- Normal text: 4.5:1
+- Large text (18pt+ or 14pt+ bold): 3:1
+
+**Level AAA (enhanced)**
+- Normal text: 7:1
+- Large text: 4.5:1
+
+### Practical usage
+
+```typescript
+import { getContrastRatio, fromRgb } from '@temelj/color';
+
+function meetsWCAG_AA(foreground: Color, background: Color, isLargeText = false): boolean {
+  const ratio = getContrastRatio(foreground, background);
+  return isLargeText ? ratio >= 3 : ratio >= 4.5;
+}
+
+function meetsWCAG_AAA(foreground: Color, background: Color, isLargeText = false): boolean {
+  const ratio = getContrastRatio(foreground, background);
+  return isLargeText ? ratio >= 4.5 : ratio >= 7;
+}
+
+const textColor = fromRgb(33, 33, 33);
+const bgColor = fromRgb(255, 255, 255);
+
+console.log(meetsWCAG_AA(textColor, bgColor));
+// true (ratio is ~15.8)
+
+console.log(meetsWCAG_AAA(textColor, bgColor));
+// true (ratio is ~15.8)
+```
+
+### Technical details
+
+The contrast ratio is calculated as:
+
+```
+ratio = (L1 + 0.05) / (L2 + 0.05)
+```
+
+Where:
+- L1 is the relative luminance of the lighter color
+- L2 is the relative luminance of the darker color
+- The 0.05 offset accounts for ambient light
+
+See: [WCAG 2.0 Contrast Ratio Definition](https://www.w3.org/TR/WCAG20/#contrast-ratiodef)

@@ -1,0 +1,292 @@
+---
+title: map
+description: Maps over an iterable concurrently with configurable concurrency and resilience
+---
+
+Maps over an iterable concurrently with configurable concurrency and resilience. Preserves order of output even if tasks finish out of order. Supports the `Skip` symbol to act as a combined map+filter.
+
+## Signature
+
+```typescript
+async function map<T, R>(
+  input: AsyncIterable<T> | Iterable<T> | Promise<Iterable<T>>,
+  mapper: (item: T, index: number) => Promise<R | SkipSymbol> | R | SkipSymbol,
+  options?: ConcurrencyOptions & ResilienceOptions,
+): Promise<R[]>
+```
+
+## Parameters
+
+<ParamField path="input" type="AsyncIterable<T> | Iterable<T> | Promise<Iterable<T>>" required>
+  The iterable to map over. Can be an array, async iterable, or promise that resolves to an iterable.
+</ParamField>
+
+<ParamField path="mapper" type="(item: T, index: number) => Promise<R | SkipSymbol> | R | SkipSymbol" required>
+  The mapping function. Receives the item and its index. Return `Skip` to omit the item from results.
+</ParamField>
+
+<ParamField path="options" type="ConcurrencyOptions & ResilienceOptions">
+  Mapping options.
+  
+  <Expandable title="properties">
+    <ParamField path="concurrency" type="number" default="Infinity">
+      Maximum number of concurrent operations.
+    </ParamField>
+    
+    <ParamField path="stopOnError" type="boolean" default="true">
+      If true, stops immediately on first error. If false, collects all errors and throws AggregateError.
+    </ParamField>
+    
+    <ParamField path="signal" type="AbortSignal">
+      Optional AbortSignal to cancel the operation.
+    </ParamField>
+  </Expandable>
+</ParamField>
+
+## Returns
+
+<ResponseField type="Promise<R[]>">
+  A promise that resolves with an array of mapped results in the original order.
+</ResponseField>
+
+## Throws
+
+- `AbortError` if the signal is aborted
+- The first error encountered if `stopOnError` is true (default)
+- `AggregateError` containing all errors if `stopOnError` is false
+
+## Examples
+
+### Basic mapping
+
+```typescript
+import { map } from '@temelj/async';
+
+const numbers = [1, 2, 3, 4, 5];
+const doubled = await map(numbers, async (n) => n * 2);
+
+console.log(doubled); // [2, 4, 6, 8, 10]
+```
+
+### Concurrent API requests
+
+```typescript
+import { map } from '@temelj/async';
+
+const userIds = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10];
+
+const users = await map(
+  userIds,
+  async (id) => {
+    const response = await fetch(`/api/users/${id}`);
+    return response.json();
+  },
+  { concurrency: 3 } // Only 3 requests at a time
+);
+```
+
+### Map with filtering using Skip
+
+```typescript
+import { map, Skip } from '@temelj/async';
+
+const numbers = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10];
+
+// Get only even numbers, doubled
+const evenDoubled = await map(numbers, (n) => {
+  if (n % 2 === 0) {
+    return n * 2;
+  }
+  return Skip;
+});
+
+console.log(evenDoubled); // [4, 8, 12, 16, 20]
+```
+
+### Order preservation
+
+```typescript
+import { map } from '@temelj/async';
+
+const items = [3, 1, 2];
+
+// Even though items take different times, order is preserved
+const results = await map(items, async (n) => {
+  await delay(n * 100); // 300ms, 100ms, 200ms
+  return n * 10;
+});
+
+console.log(results); // [30, 10, 20] - original order maintained
+```
+
+### Error handling with stopOnError
+
+```typescript
+import { map } from '@temelj/async';
+
+const items = [1, 2, 3, 4, 5];
+
+try {
+  await map(items, async (n) => {
+    if (n === 3) throw new Error('Failed at 3');
+    return n * 2;
+  }); // stopOnError: true by default
+} catch (error) {
+  console.error('Stopped on first error:', error.message);
+}
+```
+
+### Collecting all errors
+
+```typescript
+import { map } from '@temelj/async';
+
+const items = [1, 2, 3, 4, 5];
+
+try {
+  await map(
+    items,
+    async (n) => {
+      if (n % 2 === 0) throw new Error(`Failed at ${n}`);
+      return n * 2;
+    },
+    { stopOnError: false }
+  );
+} catch (error) {
+  if (error instanceof AggregateError) {
+    console.log('Multiple errors:', error.errors);
+    // Returns successful results only
+  }
+}
+```
+
+### With async iterable
+
+```typescript
+import { map } from '@temelj/async';
+
+async function* generateNumbers() {
+  for (let i = 1; i <= 5; i++) {
+    await delay(100);
+    yield i;
+  }
+}
+
+const results = await map(generateNumbers(), async (n) => n * 2);
+console.log(results); // [2, 4, 6, 8, 10]
+```
+
+### With promise input
+
+```typescript
+import { map } from '@temelj/async';
+
+const dataPromise = fetchData(); // Returns Promise<number[]>
+
+const results = await map(dataPromise, async (n) => n * 2);
+```
+
+### File processing
+
+```typescript
+import { map } from '@temelj/async';
+import { readdir, readFile } from 'fs/promises';
+
+const files = await readdir('./data');
+
+const contents = await map(
+  files,
+  async (filename) => {
+    const content = await readFile(`./data/${filename}`, 'utf-8');
+    return { filename, content, length: content.length };
+  },
+  { concurrency: 5 }
+);
+```
+
+### Image processing pipeline
+
+```typescript
+import { map, Skip } from '@temelj/async';
+
+const imageUrls = [
+  'image1.jpg',
+  'image2.jpg',
+  'invalid.txt',
+  'image3.jpg',
+];
+
+const processedImages = await map(
+  imageUrls,
+  async (url) => {
+    if (!url.endsWith('.jpg')) {
+      return Skip; // Filter out non-images
+    }
+    
+    const image = await loadImage(url);
+    const resized = await resizeImage(image, { width: 800 });
+    const optimized = await optimizeImage(resized);
+    return optimized;
+  },
+  { concurrency: 2 } // Process 2 images at a time
+);
+```
+
+### With abort signal
+
+```typescript
+import { map } from '@temelj/async';
+
+const controller = new AbortController();
+
+const task = map(
+  [1, 2, 3, 4, 5],
+  async (n) => {
+    await delay(n * 100);
+    return n * 2;
+  },
+  { signal: controller.signal }
+);
+
+// Cancel after 250ms
+setTimeout(() => controller.abort(), 250);
+
+try {
+  await task;
+} catch (error) {
+  if (error instanceof AbortError) {
+    console.log('Mapping cancelled');
+  }
+}
+```
+
+### Data enrichment
+
+```typescript
+import { map } from '@temelj/async';
+
+interface User {
+  id: number;
+  name: string;
+}
+
+interface EnrichedUser extends User {
+  posts: Post[];
+  followers: number;
+}
+
+const users: User[] = await getUsers();
+
+const enrichedUsers = await map(
+  users,
+  async (user): Promise<EnrichedUser> => {
+    const [posts, followers] = await Promise.all([
+      getUserPosts(user.id),
+      getFollowerCount(user.id),
+    ]);
+    
+    return { ...user, posts, followers };
+  },
+  { concurrency: 5 }
+);
+```

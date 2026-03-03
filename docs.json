@@ -74,12 +74,21 @@
           {
             "group": "Async",
             "pages": [
-              "api/async/retry",
+              "api/async/attempt",
+              "api/async/barrier",
               "api/async/debounce",
-              "api/async/throttle",
+              "api/async/defer",
+              "api/async/delay",
+              "api/async/limit",
+              "api/async/map",
               "api/async/mutex",
               "api/async/queue",
-              "api/async/stream"
+              "api/async/reduce",
+              "api/async/retry",
+              "api/async/stream",
+              "api/async/throttle",
+              "api/async/timeout",
+              "api/async/wait"
             ]
           },
           {
@@ -92,20 +101,28 @@
           {
             "group": "Iterator",
             "pages": [
+              "api/iterator/array",
               "api/iterator/combinatorics",
               "api/iterator/filter",
+              "api/iterator/iter",
+              "api/iterator/random",
               "api/iterator/range",
-              "api/iterator/search"
+              "api/iterator/search",
+              "api/iterator/tree"
             ]
           },
           {
             "group": "Color",
             "pages": [
-              "api/color/rgb",
+              "api/color/accessibility",
+              "api/color/hex",
               "api/color/hsl",
               "api/color/lab",
+              "api/color/lch",
+              "api/color/manipulation",
+              "api/color/oklab",
               "api/color/oklch",
-              "api/color/manipulation"
+              "api/color/rgb"
             ]
           },
           {

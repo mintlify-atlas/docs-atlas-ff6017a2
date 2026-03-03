@@ -1,0 +1,105 @@
+---
+title: Hex color utilities
+description: Parse and convert hex color strings to RGB colors
+---
+
+Utilities for working with hexadecimal color strings.
+
+## parseHex
+
+Parses a hex color string into an RGB color object.
+
+```typescript
+function parseHex(value: string): Color | undefined
+```
+
+### Parameters
+
+<ParamField path="value" type="string" required>
+  The hex color string to parse. Supports 6-character hex codes (e.g., `#FF00FF`) and 8-character hex codes with alpha (e.g., `#FF00FFFF`). The leading `#` is optional.
+</ParamField>
+
+### Returns
+
+<ResponseField name="color" type="Color | undefined">
+  Returns a `Color` object with `red`, `green`, `blue`, and optional `alpha` properties if the input is valid, or `undefined` if the hex string is invalid.
+</ResponseField>
+
+### Example
+
+```typescript
+import { parseHex } from '@temelj/color';
+
+const color = parseHex('#FF00FF');
+// { red: 255, green: 0, blue: 255 }
+
+const colorWithAlpha = parseHex('#FF00FFFF');
+// { red: 255, green: 0, blue: 255, alpha: 1.0 }
+
+const invalid = parseHex('#FF');
+// undefined
+```
+
+## toHex
+
+Converts an RGB color object to a hex color string.
+
+```typescript
+function toHex(color: Color): string
+```
+
+### Parameters
+
+<ParamField path="color" type="Color" required>
+  The RGB color object to convert. Must have `red`, `green`, and `blue` properties (0-255), and an optional `alpha` property (0-1).
+</ParamField>
+
+### Returns
+
+<ResponseField name="hex" type="string">
+  A hex color string without the leading `#`. If the color has an alpha value, it will be included as the last two characters.
+</ResponseField>
+
+### Example
+
+```typescript
+import { toHex, fromRgb } from '@temelj/color';
+
+const hex = toHex(fromRgb(255, 0, 255));
+// "ff00ff"
+
+const hexWithAlpha = toHex(fromRgb(255, 0, 255, 0.5));
+// "ff00ff80"
+```
+
+## toHexHash
+
+Converts an RGB color object to a hex CSS value with a leading `#`.
+
+```typescript
+function toHexHash(color: Color): string
+```
+
+### Parameters
+
+<ParamField path="color" type="Color" required>
+  The RGB color object to convert. Must have `red`, `green`, and `blue` properties (0-255), and an optional `alpha` property (0-1).
+</ParamField>
+
+### Returns
+
+<ResponseField name="hex" type="string">
+  A hex CSS value string with a leading `#`. If the color has an alpha value, it will be included in the output.
+</ResponseField>
+
+### Example
+
+```typescript
+import { toHexHash, fromRgb } from '@temelj/color';
+
+const cssValue = toHexHash(fromRgb(255, 0, 255));
+// "#ff00ff"
+
+const cssValueWithAlpha = toHexHash(fromRgb(255, 0, 255, 0.5));
+// "#ff00ff80"
+```

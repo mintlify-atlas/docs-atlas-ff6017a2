@@ -1,0 +1,281 @@
+---
+title: timeout
+description: Races a promise against a timer with optional fallback value
+---
+
+Races a promise against a timer. Rejects with `TimeoutError` if the promise does not resolve within the specified milliseconds. If a fallback value is provided, returns it instead of throwing on timeout.
+
+## Signature
+
+```typescript
+function timeout<T>(
+  promise: PromiseLike<T> | (() => PromiseLike<T> | T),
+  ms: number,
+  options?: StandardOptions & { fallback?: T },
+): Promise<T>
+```
+
+## Parameters
+
+<ParamField path="promise" type="PromiseLike<T> | (() => PromiseLike<T> | T)" required>
+  The promise to race against the timer, or a function that returns a promise.
+</ParamField>
+
+<ParamField path="ms" type="number" required>
+  The timeout duration in milliseconds.
+</ParamField>
+
+<ParamField path="options" type="StandardOptions & { fallback?: T }">
+  Timeout options.
+  
+  <Expandable title="properties">
+    <ParamField path="fallback" type="T">
+      Optional fallback value to return instead of throwing on timeout.
+    </ParamField>
+    
+    <ParamField path="signal" type="AbortSignal">
+      Optional AbortSignal to cancel the operation.
+    </ParamField>
+  </Expandable>
+</ParamField>
+
+## Returns
+
+<ResponseField type="Promise<T>">
+  A promise that resolves with the result of the promise if it completes in time, or the fallback value if provided.
+</ResponseField>
+
+## Throws
+
+- `TimeoutError` if the promise does not resolve within the timeout and no fallback is provided
+- `AbortError` if the signal is aborted
+- Any error thrown by the promise
+
+## Examples
+
+### Basic timeout
+
+```typescript
+import { timeout } from '@temelj/async';
+
+try {
+  const result = await timeout(fetchData(), 5000);
+  console.log(result);
+} catch (error) {
+  if (error instanceof TimeoutError) {
+    console.error('Request timed out after 5 seconds');
+  }
+}
+```
+
+### With fallback value
+
+```typescript
+import { timeout } from '@temelj/async';
+
+// Returns 'default' if fetch takes longer than 3 seconds
+const result = await timeout(
+  fetch('/api/data').then(r => r.json()),
+  3000,
+  { fallback: 'default' }
+);
+
+console.log(result); // Either fetched data or 'default'
+```
+
+### With factory function
+
+```typescript
+import { timeout } from '@temelj/async';
+
+// Function is only called when timeout starts
+const result = await timeout(
+  () => expensiveOperation(),
+  2000
+);
+```
+
+### API request timeout
+
+```typescript
+import { timeout } from '@temelj/async';
+
+async function fetchWithTimeout(url: string) {
+  try {
+    const response = await timeout(
+      fetch(url),
+      5000 // 5 second timeout
+    );
+    return await response.json();
+  } catch (error) {
+    if (error instanceof TimeoutError) {
+      throw new Error(`Request to ${url} timed out`);
+    }
+    throw error;
+  }
+}
+```
+
+### Database query timeout
+
+```typescript
+import { timeout } from '@temelj/async';
+
+const result = await timeout(
+  db.query('SELECT * FROM large_table'),
+  10000, // 10 second timeout
+  { fallback: [] } // Return empty array on timeout
+);
+```
+
+### Multiple operations with different timeouts
+
+```typescript
+import { timeout } from '@temelj/async';
+
+const [users, posts, comments] = await Promise.all([
+  timeout(fetchUsers(), 5000, { fallback: [] }),
+  timeout(fetchPosts(), 3000, { fallback: [] }),
+  timeout(fetchComments(), 2000, { fallback: [] }),
+]);
+```
+
+### Retry with timeout
+
+```typescript
+import { timeout, retry } from '@temelj/async';
+
+const result = await retry(
+  async (attempt) => {
+    return await timeout(
+      fetch('/api/data'),
+      2000 // Each attempt has 2 second timeout
+    );
+  },
+  { times: 3 }
+);
+```
+
+### Progressive timeout
+
+```typescript
+import { timeout } from '@temelj/async';
+
+async function fetchWithProgressiveTimeout(url: string) {
+  // Try with short timeout first
+  try {
+    return await timeout(fetch(url), 1000);
+  } catch (error) {
+    if (error instanceof TimeoutError) {
+      // Retry with longer timeout
+      console.log('Retrying with longer timeout...');
+      return await timeout(fetch(url), 5000);
+    }
+    throw error;
+  }
+}
+```
+
+### With abort signal
+
+```typescript
+import { timeout } from '@temelj/async';
+
+const controller = new AbortController();
+
+const task = timeout(
+  fetch('/api/data', { signal: controller.signal }),
+  10000,
+  { signal: controller.signal }
+);
+
+// Cancel from user action
+button.addEventListener('click', () => {
+  controller.abort();
+});
+
+try {
+  await task;
+} catch (error) {
+  if (error instanceof AbortError) {
+    console.log('Request cancelled by user');
+  } else if (error instanceof TimeoutError) {
+    console.log('Request timed out');
+  }
+}
+```
+
+### Cache with timeout
+
+```typescript
+import { timeout } from '@temelj/async';
+
+class CachedAPI {
+  private cache = new Map<string, any>();
+  
+  async fetch(key: string, fetcher: () => Promise<any>) {
+    const cached = this.cache.get(key);
+    if (cached) return cached;
+    
+    const result = await timeout(
+      fetcher(),
+      5000,
+      { fallback: null }
+    );
+    
+    if (result !== null) {
+      this.cache.set(key, result);
+    }
+    
+    return result;
+  }
+}
+```
+
+### Race with timeout
+
+```typescript
+import { timeout } from '@temelj/async';
+
+// Fetch from multiple sources, use first to respond within timeout
+const sources = [
+  'https://api1.example.com/data',
+  'https://api2.example.com/data',
+  'https://api3.example.com/data',
+];
+
+const result = await Promise.race(
+  sources.map(url => 
+    timeout(
+      fetch(url).then(r => r.json()),
+      3000,
+      { fallback: null }
+    )
+  )
+);
+```
+
+### Graceful degradation
+
+```typescript
+import { timeout } from '@temelj/async';
+
+async function loadDashboard() {
+  const [userData, analytics, notifications] = await Promise.all([
+    // Critical data - no fallback
+    timeout(fetchUserData(), 5000),
+    
+    // Optional data - use fallback
+    timeout(fetchAnalytics(), 3000, { 
+      fallback: { views: 0, clicks: 0 } 
+    }),
+    
+    // Optional data - use fallback
+    timeout(fetchNotifications(), 2000, { 
+      fallback: [] 
+    }),
+  ]);
+  
+  return { userData, analytics, notifications };
+}
+```

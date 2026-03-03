@@ -1,0 +1,191 @@
+---
+title: delay
+description: Resolves after a specified duration in milliseconds
+---
+
+Resolves after the specified duration in milliseconds. Rejects immediately with `AbortError` if the signal is already aborted or becomes aborted.
+
+## Signature
+
+```typescript
+function delay(ms: number, options?: StandardOptions): Promise<void>
+```
+
+## Parameters
+
+<ParamField path="ms" type="number" required>
+  The duration to wait in milliseconds.
+</ParamField>
+
+<ParamField path="options" type="StandardOptions">
+  Delay options.
+  
+  <Expandable title="properties">
+    <ParamField path="signal" type="AbortSignal">
+      Optional AbortSignal to cancel the delay.
+    </ParamField>
+  </Expandable>
+</ParamField>
+
+## Returns
+
+<ResponseField type="Promise<void>">
+  A promise that resolves after the specified duration.
+</ResponseField>
+
+## Throws
+
+- `AbortError` if the signal is aborted
+
+## Examples
+
+### Basic delay
+
+```typescript
+import { delay } from '@temelj/async';
+
+console.log('Starting...');
+await delay(1000);
+console.log('1 second later');
+```
+
+### Sequential operations
+
+```typescript
+import { delay } from '@temelj/async';
+
+for (let i = 1; i <= 5; i++) {
+  console.log(`Step ${i}`);
+  await delay(500);
+}
+```
+
+### Rate limiting
+
+```typescript
+import { delay } from '@temelj/async';
+
+async function processWithRateLimit(items: string[]) {
+  for (const item of items) {
+    await processItem(item);
+    // Wait 100ms between items
+    await delay(100);
+  }
+}
+```
+
+### With abort signal
+
+```typescript
+import { delay } from '@temelj/async';
+
+const controller = new AbortController();
+
+const delayTask = delay(5000, { signal: controller.signal });
+
+// Cancel after 1 second
+setTimeout(() => controller.abort(), 1000);
+
+try {
+  await delayTask;
+  console.log('Delay completed');
+} catch (error) {
+  if (error instanceof AbortError) {
+    console.log('Delay cancelled');
+  }
+}
+```
+
+### Timeout with cleanup
+
+```typescript
+import { delay } from '@temelj/async';
+
+const controller = new AbortController();
+
+const timeoutPromise = delay(10000, { signal: controller.signal });
+const workPromise = doWork();
+
+try {
+  await Promise.race([
+    workPromise,
+    timeoutPromise.then(() => {
+      throw new Error('Timeout exceeded');
+    }),
+  ]);
+} finally {
+  // Cancel the timeout if work completes first
+  controller.abort();
+}
+```
+
+### Debouncing user input
+
+```typescript
+import { delay } from '@temelj/async';
+
+let abortController: AbortController | null = null;
+
+async function handleInput(value: string) {
+  // Cancel previous delay
+  abortController?.abort();
+  
+  // Create new delay
+  abortController = new AbortController();
+  
+  try {
+    await delay(300, { signal: abortController.signal });
+    // Process input after user stops typing
+    await processInput(value);
+  } catch (error) {
+    if (error instanceof AbortError) {
+      // Input changed, ignore
+      return;
+    }
+    throw error;
+  }
+}
+```
+
+### Retry with backoff
+
+```typescript
+import { delay } from '@temelj/async';
+
+async function retryWithBackoff<T>(
+  fn: () => Promise<T>,
+  maxAttempts: number = 3
+): Promise<T> {
+  for (let attempt = 0; attempt < maxAttempts; attempt++) {
+    try {
+      return await fn();
+    } catch (error) {
+      if (attempt === maxAttempts - 1) {
+        throw error;
+      }
+      // Exponential backoff: 1s, 2s, 4s
+      const backoff = Math.pow(2, attempt) * 1000;
+      await delay(backoff);
+    }
+  }
+  throw new Error('Should not reach here');
+}
+```
+
+### Animation timing
+
+```typescript
+import { delay } from '@temelj/async';
+
+async function animateProgress(duration: number) {
+  const steps = 100;
+  const stepDuration = duration / steps;
+  
+  for (let i = 0; i <= steps; i++) {
+    updateProgressBar(i);
+    await delay(stepDuration);
+  }
+}
+
+await animateProgress(2000); // 2 second animation
+```

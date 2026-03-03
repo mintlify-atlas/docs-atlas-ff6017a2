@@ -1,0 +1,150 @@
+---
+title: Tree traversal functions
+description: Functions for traversing tree structures
+---
+
+## traverseBfs
+
+Traverses a tree structure using breadth-first search.
+
+<ParamField path="root" type="T" required>
+  The root node of the tree
+</ParamField>
+
+<ParamField path="getChildren" type="(node: T) => Iterable<T>" required>
+  A function that returns the children of a node
+</ParamField>
+
+<ResponseField name="return" type="Generator<T>">
+  A generator that yields nodes in BFS order
+</ResponseField>
+
+### Example
+
+```typescript
+import { traverseBfs } from "@temelj/iterator";
+
+interface TreeNode {
+  value: number;
+  children: TreeNode[];
+}
+
+const tree: TreeNode = {
+  value: 1,
+  children: [
+    {
+      value: 2,
+      children: [
+        { value: 4, children: [] },
+        { value: 5, children: [] },
+      ],
+    },
+    {
+      value: 3,
+      children: [{ value: 6, children: [] }],
+    },
+  ],
+};
+
+// Traverse breadth-first
+for (const node of traverseBfs(tree, (n) => n.children)) {
+  console.log(node.value); // 1, 2, 3, 4, 5, 6
+}
+
+// Collect all values
+const values = Array.from(
+  traverseBfs(tree, (n) => n.children)
+).map((n) => n.value);
+console.log(values); // [1, 2, 3, 4, 5, 6]
+
+// Find a specific node
+const found = Array.from(
+  traverseBfs(tree, (n) => n.children)
+).find((n) => n.value === 5);
+console.log(found); // { value: 5, children: [] }
+```
+
+## traverseDfs
+
+Traverses a tree structure using depth-first search (pre-order).
+
+<ParamField path="root" type="T" required>
+  The root node of the tree
+</ParamField>
+
+<ParamField path="getChildren" type="(node: T) => Iterable<T>" required>
+  A function that returns the children of a node
+</ParamField>
+
+<ResponseField name="return" type="Generator<T>">
+  A generator that yields nodes in DFS pre-order
+</ResponseField>
+
+### Example
+
+```typescript
+import { traverseDfs } from "@temelj/iterator";
+
+interface TreeNode {
+  value: number;
+  children: TreeNode[];
+}
+
+const tree: TreeNode = {
+  value: 1,
+  children: [
+    {
+      value: 2,
+      children: [
+        { value: 4, children: [] },
+        { value: 5, children: [] },
+      ],
+    },
+    {
+      value: 3,
+      children: [{ value: 6, children: [] }],
+    },
+  ],
+};
+
+// Traverse depth-first
+for (const node of traverseDfs(tree, (n) => n.children)) {
+  console.log(node.value); // 1, 2, 4, 5, 3, 6
+}
+
+// Collect all values
+const values = Array.from(
+  traverseDfs(tree, (n) => n.children)
+).map((n) => n.value);
+console.log(values); // [1, 2, 4, 5, 3, 6]
+
+// Traverse file system
+interface FileNode {
+  name: string;
+  type: "file" | "directory";
+  children?: FileNode[];
+}
+
+const fileSystem: FileNode = {
+  name: "root",
+  type: "directory",
+  children: [
+    { name: "file1.txt", type: "file" },
+    {
+      name: "folder1",
+      type: "directory",
+      children: [
+        { name: "file2.txt", type: "file" },
+      ],
+    },
+  ],
+};
+
+for (const node of traverseDfs(fileSystem, (n) => n.children || [])) {
+  console.log(`${node.type}: ${node.name}`);
+}
+// directory: root
+// file: file1.txt
+// directory: folder1
+// file: file2.txt
+```

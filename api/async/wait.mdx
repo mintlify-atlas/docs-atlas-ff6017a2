@@ -1,0 +1,335 @@
+---
+title: wait
+description: Waits until a predicate returns true, polling at a configurable interval
+---
+
+Waits until a predicate returns true, polling at a configurable interval. Useful for waiting for conditions to be met.
+
+## Signature
+
+```typescript
+async function wait(
+  predicate: () => Promise<boolean> | boolean,
+  options?: StandardOptions & {
+    interval?: number;
+    timeout?: number;
+  },
+): Promise<void>
+```
+
+## Parameters
+
+<ParamField path="predicate" type="() => Promise<boolean> | boolean" required>
+  The condition to wait for. Called repeatedly until it returns true.
+</ParamField>
+
+<ParamField path="options" type="StandardOptions & { interval?: number; timeout?: number }">
+  Wait options.
+  
+  <Expandable title="properties">
+    <ParamField path="interval" type="number" default="100">
+      Polling interval in milliseconds.
+    </ParamField>
+    
+    <ParamField path="timeout" type="number">
+      Maximum time to wait in milliseconds. If specified, throws TimeoutError if exceeded.
+    </ParamField>
+    
+    <ParamField path="signal" type="AbortSignal">
+      Optional AbortSignal to cancel waiting.
+    </ParamField>
+  </Expandable>
+</ParamField>
+
+## Returns
+
+<ResponseField type="Promise<void>">
+  A promise that resolves when the predicate returns true.
+</ResponseField>
+
+## Throws
+
+- `TimeoutError` if the timeout is exceeded
+- `AbortError` if the signal is aborted
+- Any error thrown by the predicate
+
+## Examples
+
+### Basic usage
+
+```typescript
+import { wait } from '@temelj/async';
+
+let ready = false;
+
+setTimeout(() => {
+  ready = true;
+}, 1000);
+
+// Wait until ready is true
+await wait(() => ready);
+console.log('Ready!');
+```
+
+### Wait for element to appear
+
+```typescript
+import { wait } from '@temelj/async';
+
+// Wait for DOM element
+await wait(
+  () => document.querySelector('#my-element') !== null,
+  { interval: 50 }
+);
+
+const element = document.querySelector('#my-element');
+```
+
+### Wait for API to be ready
+
+```typescript
+import { wait } from '@temelj/async';
+
+async function waitForAPI() {
+  await wait(
+    async () => {
+      try {
+        const response = await fetch('/api/health');
+        return response.ok;
+      } catch {
+        return false;
+      }
+    },
+    { interval: 1000, timeout: 30000 } // Check every second, timeout after 30s
+  );
+  
+  console.log('API is ready');
+}
+```
+
+### Wait for file to exist
+
+```typescript
+import { wait } from '@temelj/async';
+import { access } from 'fs/promises';
+
+async function waitForFile(path: string) {
+  await wait(
+    async () => {
+      try {
+        await access(path);
+        return true;
+      } catch {
+        return false;
+      }
+    },
+    { interval: 500, timeout: 10000 }
+  );
+}
+
+await waitForFile('./output.txt');
+console.log('File exists!');
+```
+
+### Wait for condition with timeout
+
+```typescript
+import { wait } from '@temelj/async';
+
+let counter = 0;
+
+const interval = setInterval(() => {
+  counter++;
+}, 100);
+
+try {
+  await wait(
+    () => counter >= 10,
+    { interval: 50, timeout: 2000 }
+  );
+  console.log('Condition met!');
+} catch (error) {
+  if (error instanceof TimeoutError) {
+    console.error('Timed out waiting for condition');
+  }
+} finally {
+  clearInterval(interval);
+}
+```
+
+### Wait for resource to be available
+
+```typescript
+import { wait } from '@temelj/async';
+
+class ResourcePool {
+  private available = 0;
+  
+  async acquire() {
+    await wait(
+      () => this.available > 0,
+      { interval: 10, timeout: 5000 }
+    );
+    
+    this.available--;
+    return () => this.available++; // release function
+  }
+  
+  release() {
+    this.available++;
+  }
+}
+```
+
+### Database connection ready
+
+```typescript
+import { wait } from '@temelj/async';
+
+class Database {
+  private connected = false;
+  
+  async connect() {
+    // Start connection process
+    this.startConnection();
+    
+    // Wait for connection to be established
+    await wait(
+      () => this.connected,
+      { interval: 100, timeout: 10000 }
+    );
+    
+    console.log('Database connected');
+  }
+  
+  private startConnection() {
+    setTimeout(() => {
+      this.connected = true;
+    }, 2000);
+  }
+}
+```
+
+### With abort signal
+
+```typescript
+import { wait } from '@temelj/async';
+
+const controller = new AbortController();
+
+const task = wait(
+  () => false, // Never true
+  { 
+    interval: 100,
+    signal: controller.signal 
+  }
+);
+
+// Cancel after 1 second
+setTimeout(() => controller.abort(), 1000);
+
+try {
+  await task;
+} catch (error) {
+  if (error instanceof AbortError) {
+    console.log('Wait cancelled');
+  }
+}
+```
+
+### Wait for multiple conditions
+
+```typescript
+import { wait } from '@temelj/async';
+
+let serviceA = false;
+let serviceB = false;
+let serviceC = false;
+
+// Start services
+startServices();
+
+// Wait for all services to be ready
+await wait(
+  () => serviceA && serviceB && serviceC,
+  { interval: 200, timeout: 30000 }
+);
+
+console.log('All services ready');
+```
+
+### Polling with custom interval
+
+```typescript
+import { wait } from '@temelj/async';
+
+async function waitForJobCompletion(jobId: string) {
+  await wait(
+    async () => {
+      const status = await checkJobStatus(jobId);
+      return status === 'completed';
+    },
+    { interval: 2000 } // Check every 2 seconds
+  );
+  
+  return await getJobResult(jobId);
+}
+
+const result = await waitForJobCompletion('job-123');
+```
+
+### Wait for state change
+
+```typescript
+import { wait } from '@temelj/async';
+
+class StateMachine {
+  private state = 'idle';
+  
+  async waitForState(targetState: string, timeout?: number) {
+    await wait(
+      () => this.state === targetState,
+      { interval: 50, timeout }
+    );
+  }
+  
+  setState(newState: string) {
+    this.state = newState;
+  }
+}
+
+const machine = new StateMachine();
+
+setTimeout(() => machine.setState('ready'), 1000);
+
+await machine.waitForState('ready', 5000);
+console.log('State machine is ready');
+```
+
+### Wait with progress reporting
+
+```typescript
+import { wait } from '@temelj/async';
+
+async function waitWithProgress(
+  predicate: () => boolean | Promise<boolean>,
+  maxTime: number
+) {
+  const startTime = Date.now();
+  
+  await wait(
+    async () => {
+      const elapsed = Date.now() - startTime;
+      const progress = Math.min((elapsed / maxTime) * 100, 100);
+      console.log(`Progress: ${progress.toFixed(0)}%`);
+      return predicate();
+    },
+    { interval: 500, timeout: maxTime }
+  );
+}
+
+let done = false;
+setTimeout(() => done = true, 3000);
+
+await waitWithProgress(() => done, 5000);
+```

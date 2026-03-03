@@ -131,13 +131,13 @@ console.log(range);
 Convert between different naming conventions:
 
 ```typescript
-import { camelCase, snakeCase, kebabCase, pascalCase } from '@temelj/string';
+import { toCamelCase, toSnakeCase, toKebabCase, toPascalCase } from '@temelj/string';
 
 const apiField = 'user_name';
 
-console.log(camelCase(apiField));  // 'userName'
-console.log(pascalCase(apiField)); // 'UserName'
-console.log(kebabCase(apiField));  // 'user-name'
+console.log(toCamelCase(apiField));  // 'userName'
+console.log(toPascalCase(apiField)); // 'UserName'
+console.log(toKebabCase(apiField));  // 'user-name'
 ```
 
 ## Math utilities
@@ -166,7 +166,7 @@ Here's a real-world example combining multiple packages:
 ```typescript
 import { retry } from '@temelj/async';
 import { fromPromise, isOk, map } from '@temelj/result';
-import { camelCase } from '@temelj/string';
+import { toCamelCase } from '@temelj/string';
 
 // Fetch data with retry and convert to Result
 async function fetchUserData(userId: string) {

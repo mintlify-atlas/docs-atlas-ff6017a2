@@ -1,0 +1,117 @@
+---
+title: OKLAB color space
+description: Convert colors between RGB and OKLAB color spaces
+---
+
+Utilities for working with the OKLAB color space, a perceptually uniform color space designed for image processing.
+
+## OkLabColor
+
+Interface representing a color in the OKLAB color space.
+
+```typescript
+interface OkLabColor {
+  l: number;
+  a: number;
+  b: number;
+  alpha?: number | undefined;
+}
+```
+
+### Properties
+
+<ResponseField name="l" type="number">
+  Lightness component (0-1)
+</ResponseField>
+
+<ResponseField name="a" type="number">
+  Green-red component (negative values represent green, positive values represent red)
+</ResponseField>
+
+<ResponseField name="b" type="number">
+  Blue-yellow component (negative values represent blue, positive values represent yellow)
+</ResponseField>
+
+<ResponseField name="alpha" type="number | undefined">
+  Optional alpha channel (0-1)
+</ResponseField>
+
+## rgbToOkLab
+
+Converts an RGB color to an OKLAB color.
+
+```typescript
+function rgbToOkLab(color: Color): OkLabColor
+```
+
+### Parameters
+
+<ParamField path="color" type="Color" required>
+  The RGB color to convert. Must have `red`, `green`, and `blue` properties (0-255), and an optional `alpha` property (0-1).
+</ParamField>
+
+### Returns
+
+<ResponseField name="oklab" type="OkLabColor">
+  An OKLAB color object with `l` (lightness), `a` (green-red), `b` (blue-yellow), and optional `alpha` properties.
+</ResponseField>
+
+### Example
+
+```typescript
+import { rgbToOkLab, fromRgb } from '@temelj/color';
+
+const oklab = rgbToOkLab(fromRgb(255, 0, 0));
+// { l: 0.628, a: 0.225, b: 0.126, alpha: undefined }
+
+const oklabWithAlpha = rgbToOkLab(fromRgb(0, 128, 255, 0.8));
+// { l: 0.559, a: -0.162, b: -0.112, alpha: 0.8 }
+```
+
+## okLabToRgb
+
+Converts an OKLAB color to an RGB color.
+
+```typescript
+function okLabToRgb(color: OkLabColor): Color
+```
+
+### Parameters
+
+<ParamField path="color" type="OkLabColor" required>
+  The OKLAB color to convert. Must have `l` (lightness), `a` (green-red), and `b` (blue-yellow) properties, and an optional `alpha` property.
+</ParamField>
+
+### Returns
+
+<ResponseField name="rgb" type="Color">
+  An RGB color object with `red`, `green`, `blue`, and optional `alpha` properties. Color values are clamped to the valid range (0-255) and rounded to integers.
+</ResponseField>
+
+### Example
+
+```typescript
+import { okLabToRgb } from '@temelj/color';
+
+const rgb = okLabToRgb({ l: 0.5, a: 0.1, b: -0.1 });
+// { red: 156, green: 94, blue: 163, alpha: undefined }
+
+const rgbWithAlpha = okLabToRgb({ l: 0.7, a: 0, b: 0, alpha: 0.5 });
+// { red: 170, green: 170, blue: 170, alpha: 0.5 }
+```
+
+## About OKLAB
+
+OKLAB is a perceptually uniform color space that:
+
+- Provides better perceptual uniformity than LAB
+- Is optimized for modern display devices
+- Works well for color interpolation and manipulation
+- Uses a simple transformation from linear RGB
+
+The OKLAB color space is particularly useful for:
+
+- Generating color palettes
+- Creating smooth color gradients
+- Adjusting colors while maintaining perceptual consistency
+- Image processing operations

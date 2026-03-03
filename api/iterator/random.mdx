@@ -1,0 +1,102 @@
+---
+title: Random sampling functions
+description: Functions for random sampling and shuffling arrays
+---
+
+## sample
+
+Returns a random sample of the given array.
+
+<ParamField path="array" type="T[]" required>
+  The array to sample from
+</ParamField>
+
+<ResponseField name="return" type="T | undefined">
+  A random sample of the given array, or undefined if the array is empty
+</ResponseField>
+
+### Example
+
+```typescript
+import { sample } from "@temelj/iterator";
+
+const colors = ["red", "green", "blue"];
+const randomColor = sample(colors);
+console.log(randomColor); // "green" (or any other color)
+
+// Empty array returns undefined
+console.log(sample([])); // undefined
+
+// Sample from objects
+const users = [
+  { id: 1, name: "Alice" },
+  { id: 2, name: "Bob" },
+  { id: 3, name: "Charlie" },
+];
+const randomUser = sample(users);
+console.log(randomUser); // One of the user objects
+```
+
+## sampleList
+
+Returns a list of random samples of the given array.
+
+<ParamField path="array" type="T[]" required>
+  The array to sample from
+</ParamField>
+
+<ParamField path="count" type="number" required>
+  The number of samples to return
+</ParamField>
+
+<ResponseField name="return" type="T[]">
+  A list of random samples of the given array. May contain duplicates
+</ResponseField>
+
+### Example
+
+```typescript
+import { sampleList } from "@temelj/iterator";
+
+const numbers = [1, 2, 3, 4, 5];
+const samples = sampleList(numbers, 3);
+console.log(samples); // [2, 5, 2] (random, may contain duplicates)
+
+// Sample from strings
+const letters = ["a", "b", "c"];
+const randomLetters = sampleList(letters, 5);
+console.log(randomLetters); // ["b", "a", "c", "b", "a"] (5 samples with repetition)
+
+// Empty array returns empty list
+console.log(sampleList([], 3)); // []
+```
+
+## arrayShuffle
+
+Shuffles the elements of the given array in place.
+
+<ParamField path="array" type="T[]" required>
+  The array to shuffle (modified in place)
+</ParamField>
+
+<ResponseField name="return" type="T[]">
+  The shuffled array (same reference as input)
+</ResponseField>
+
+### Example
+
+```typescript
+import { arrayShuffle } from "@temelj/iterator";
+
+const numbers = [1, 2, 3, 4, 5];
+const shuffled = arrayShuffle(numbers);
+console.log(shuffled); // [3, 1, 5, 2, 4] (random order)
+console.log(numbers === shuffled); // true (modified in place)
+
+// Shuffle deck of cards
+const suits = ["♠", "♥", "♦", "♣"];
+const ranks = ["A", "2", "3", "4", "5", "6", "7", "8", "9", "10", "J", "Q", "K"];
+const deck = suits.flatMap(suit => ranks.map(rank => `${rank}${suit}`));
+arrayShuffle(deck);
+console.log(deck.slice(0, 5)); // First 5 random cards
+```

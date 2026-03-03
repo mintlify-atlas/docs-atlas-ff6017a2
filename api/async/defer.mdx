@@ -1,0 +1,205 @@
+---
+title: defer
+description: Creates a deferred promise with externally accessible resolve and reject functions
+---
+
+Creates a deferred promise, exposing `resolve` and `reject` functions alongside the promise itself. This allows you to control promise resolution from outside the promise constructor.
+
+## Signature
+
+```typescript
+function defer<T>(): Deferred<T>
+```
+
+## Returns
+
+<ResponseField type="Deferred<T>">
+  An object containing the promise and its control functions.
+  
+  <Expandable title="properties">
+    <ResponseField name="promise" type="Promise<T>">
+      The underlying promise.
+    </ResponseField>
+    
+    <ResponseField name="resolve" type="(value: T | PromiseLike<T>) => void">
+      Function to resolve the promise with the given value.
+    </ResponseField>
+    
+    <ResponseField name="reject" type="(reason?: unknown) => void">
+      Function to reject the promise with the given reason.
+    </ResponseField>
+  </Expandable>
+</ResponseField>
+
+## Examples
+
+### Basic usage
+
+```typescript
+import { defer } from '@temelj/async';
+
+const deferred = defer<number>();
+
+// Resolve the promise from outside
+deferred.resolve(42);
+
+const result = await deferred.promise;
+console.log(result); // 42
+```
+
+### Event-based resolution
+
+```typescript
+import { defer } from '@temelj/async';
+
+function waitForEvent(emitter: EventEmitter, eventName: string) {
+  const deferred = defer<any>();
+  
+  emitter.once(eventName, (data) => {
+    deferred.resolve(data);
+  });
+  
+  emitter.once('error', (error) => {
+    deferred.reject(error);
+  });
+  
+  return deferred.promise;
+}
+
+// Usage
+const data = await waitForEvent(myEmitter, 'data');
+```
+
+### Coordinating async operations
+
+```typescript
+import { defer } from '@temelj/async';
+
+class AsyncQueue<T> {
+  private items: T[] = [];
+  private waiting: Deferred<T>[] = [];
+  
+  push(item: T) {
+    const waiter = this.waiting.shift();
+    if (waiter) {
+      waiter.resolve(item);
+    } else {
+      this.items.push(item);
+    }
+  }
+  
+  async pop(): Promise<T> {
+    const item = this.items.shift();
+    if (item !== undefined) {
+      return item;
+    }
+    
+    const deferred = defer<T>();
+    this.waiting.push(deferred);
+    return deferred.promise;
+  }
+}
+
+const queue = new AsyncQueue<string>();
+
+// Consumer waits for items
+const consumeTask = async () => {
+  const item = await queue.pop();
+  console.log('Received:', item);
+};
+
+consumeTask(); // Waits
+
+// Producer adds item
+queue.push('Hello'); // Consumer receives it immediately
+```
+
+### Timeout wrapper
+
+```typescript
+import { defer } from '@temelj/async';
+
+function withTimeout<T>(promise: Promise<T>, ms: number): Promise<T> {
+  const deferred = defer<T>();
+  
+  const timer = setTimeout(() => {
+    deferred.reject(new Error('Timeout'));
+  }, ms);
+  
+  promise.then(
+    (value) => {
+      clearTimeout(timer);
+      deferred.resolve(value);
+    },
+    (error) => {
+      clearTimeout(timer);
+      deferred.reject(error);
+    }
+  );
+  
+  return deferred.promise;
+}
+
+const result = await withTimeout(fetchData(), 5000);
+```
+
+### Manual cache implementation
+
+```typescript
+import { defer } from '@temelj/async';
+
+class AsyncCache<K, V> {
+  private cache = new Map<K, V>();
+  private pending = new Map<K, Deferred<V>>();
+  
+  async get(key: K, loader: () => Promise<V>): Promise<V> {
+    // Return cached value
+    const cached = this.cache.get(key);
+    if (cached !== undefined) {
+      return cached;
+    }
+    
+    // Wait for pending load
+    const pending = this.pending.get(key);
+    if (pending) {
+      return pending.promise;
+    }
+    
+    // Start new load
+    const deferred = defer<V>();
+    this.pending.set(key, deferred);
+    
+    try {
+      const value = await loader();
+      this.cache.set(key, value);
+      deferred.resolve(value);
+      return value;
+    } catch (error) {
+      deferred.reject(error);
+      throw error;
+    } finally {
+      this.pending.delete(key);
+    }
+  }
+}
+
+const cache = new AsyncCache<string, User>();
+const user = await cache.get('user-123', () => fetchUser('user-123'));
+```
+
+### Reject example
+
+```typescript
+import { defer } from '@temelj/async';
+
+const deferred = defer<string>();
+
+// Reject the promise
+deferred.reject(new Error('Something went wrong'));
+
+try {
+  await deferred.promise;
+} catch (error) {
+  console.error('Promise rejected:', error);
+}
+```

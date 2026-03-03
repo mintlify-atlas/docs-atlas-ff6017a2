@@ -1,0 +1,652 @@
+---
+title: Collection operations
+description: Functions for transforming, filtering, and analyzing iterables
+---
+
+## collectMap
+
+Collects the values from an iterable into a record.
+
+<ParamField path="it" type="Iterable<V>" required>
+  The iterable to collect from
+</ParamField>
+
+<ParamField path="getKey" type="(e: V) => K" required>
+  A function that takes an element from the iterable and returns a key
+</ParamField>
+
+<ParamField path="map" type="(e: V) => V1">
+  An optional function that takes an element from the iterable and returns a value. If not provided, the original value is used
+</ParamField>
+
+<ResponseField name="return" type="Record<K, V1>">
+  A record where the keys are the result of calling getKey on each element, and the values are the result of calling map on each element
+</ResponseField>
+
+### Example
+
+```typescript
+import { collectMap } from "@temelj/iterator";
+
+const numbers = [1, 2, 3];
+const result = collectMap(numbers, (n) => n * 2);
+console.log(result); // { 2: 1, 4: 2, 6: 3 }
+```
+
+## groupBy
+
+Groups elements from an iterable using a key selector function.
+
+<ParamField path="it" type="Iterable<T>" required>
+  The iterable to group
+</ParamField>
+
+<ParamField path="getKey" type="(item: T) => K" required>
+  A function that derives a key from an element
+</ParamField>
+
+<ResponseField name="return" type="Map<K, T[]>">
+  A Map where keys are the result of calling getKey on each element, and values are arrays of elements with that key
+</ResponseField>
+
+### Example
+
+```typescript
+import { groupBy } from "@temelj/iterator";
+
+// Group numbers by even/odd
+const numbers = [1, 2, 3, 4, 5, 6];
+const result = groupBy(numbers, (x) => x % 2 === 0 ? "even" : "odd");
+console.log(result.get("even")); // [2, 4, 6]
+console.log(result.get("odd"));  // [1, 3, 5]
+
+// Group objects by property
+const users = [
+  { name: "Alice", group: "A" },
+  { name: "Bob", group: "B" },
+  { name: "Charlie", group: "A" },
+];
+const byGroup = groupBy(users, (u) => u.group);
+console.log(byGroup.get("A"));
+// [{ name: "Alice", group: "A" }, { name: "Charlie", group: "A" }]
+```
+
+## chunk
+
+Splits an iterable into arrays of a specific size.
+
+<ParamField path="iterable" type="Iterable<T>" required>
+  The iterable to chunk
+</ParamField>
+
+<ParamField path="size" type="number" required>
+  The size of each chunk (must be greater than 0)
+</ParamField>
+
+<ResponseField name="return" type="T[][]">
+  An array of chunks
+</ResponseField>
+
+### Example
+
+```typescript
+import { chunk } from "@temelj/iterator";
+
+const numbers = [1, 2, 3, 4, 5];
+console.log(chunk(numbers, 2)); // [[1, 2], [3, 4], [5]]
+
+const letters = ["a", "b", "c", "d"];
+console.log(chunk(letters, 2)); // [["a", "b"], ["c", "d"]]
+```
+
+## window
+
+Yields a sliding window over the iterable.
+
+<ParamField path="iterable" type="Iterable<T>" required>
+  The iterable to window
+</ParamField>
+
+<ParamField path="size" type="number" required>
+  The size of each window (must be greater than 0)
+</ParamField>
+
+<ResponseField name="return" type="T[][]">
+  An array of windows
+</ResponseField>
+
+### Example
+
+```typescript
+import { window } from "@temelj/iterator";
+
+const numbers = [1, 2, 3, 4];
+console.log(window(numbers, 2));
+// [[1, 2], [2, 3], [3, 4]]
+
+console.log(window(numbers, 3));
+// [[1, 2, 3], [2, 3, 4]]
+```
+
+## zip
+
+Combines two iterables into tuples until one is exhausted.
+
+<ParamField path="a" type="Iterable<T>" required>
+  The first iterable
+</ParamField>
+
+<ParamField path="b" type="Iterable<U>" required>
+  The second iterable
+</ParamField>
+
+<ResponseField name="return" type="[T, U][]">
+  An array of tuples
+</ResponseField>
+
+### Example
+
+```typescript
+import { zip } from "@temelj/iterator";
+
+const numbers = [1, 2, 3];
+const letters = ["a", "b", "c"];
+console.log(zip(numbers, letters));
+// [[1, "a"], [2, "b"], [3, "c"]]
+
+// Stops when the shorter iterable is exhausted
+console.log(zip([1, 2], ["a", "b", "c"]));
+// [[1, "a"], [2, "b"]]
+```
+
+## flatten
+
+Flattens nested iterables by one level.
+
+<ParamField path="iterable" type="Iterable<Iterable<T> | T>" required>
+  The iterable to flatten
+</ParamField>
+
+<ResponseField name="return" type="T[]">
+  An array of flattened elements
+</ResponseField>
+
+### Example
+
+```typescript
+import { flatten } from "@temelj/iterator";
+
+const nested = [[1, 2], [3, 4], [5]];
+console.log(flatten(nested)); // [1, 2, 3, 4, 5]
+
+const mixed = [[1, 2], [], [3]];
+console.log(flatten(mixed)); // [1, 2, 3]
+```
+
+## unique
+
+Returns a sequence of unique items from an iterable.
+
+<ParamField path="iterable" type="Iterable<T>" required>
+  The iterable to filter for unique items
+</ParamField>
+
+<ParamField path="identity" type="(item: T) => unknown">
+  An optional function that returns a value to use for uniqueness comparison
+</ParamField>
+
+<ResponseField name="return" type="T[]">
+  An array of unique items
+</ResponseField>
+
+### Example
+
+```typescript
+import { unique } from "@temelj/iterator";
+
+// With primitive values
+console.log(unique([1, 2, 2, 3, 3, 3])); // [1, 2, 3]
+console.log(unique(["a", "b", "a", "c"])); // ["a", "b", "c"]
+
+// With custom identity function
+const users = [
+  { id: 1, name: "Alice" },
+  { id: 2, name: "Bob" },
+  { id: 1, name: "Alice Duplicate" },
+];
+console.log(unique(users, (u) => u.id));
+// [{ id: 1, name: "Alice" }, { id: 2, name: "Bob" }]
+```
+
+## union
+
+Combines two iterables into a set of unique items from both.
+
+<ParamField path="a" type="Iterable<T>" required>
+  The first iterable
+</ParamField>
+
+<ParamField path="b" type="Iterable<T>" required>
+  The second iterable
+</ParamField>
+
+<ResponseField name="return" type="T[]">
+  An array of unique items from both iterables
+</ResponseField>
+
+### Example
+
+```typescript
+import { union } from "@temelj/iterator";
+
+console.log(union([1, 2, 3], [2, 3, 4])); // [1, 2, 3, 4]
+console.log(union([1, 2], [3, 4])); // [1, 2, 3, 4]
+```
+
+## intersection
+
+Returns items present in both iterables.
+
+<ParamField path="a" type="Iterable<T>" required>
+  The first iterable
+</ParamField>
+
+<ParamField path="b" type="Iterable<T>" required>
+  The second iterable
+</ParamField>
+
+<ResponseField name="return" type="T[]">
+  An array of items present in both iterables
+</ResponseField>
+
+### Example
+
+```typescript
+import { intersection } from "@temelj/iterator";
+
+console.log(intersection([1, 2, 3], [2, 3, 4])); // [2, 3]
+console.log(intersection([1, 2, 3], [4, 5, 6])); // []
+```
+
+## difference
+
+Returns items in the first iterable that are not in the second.
+
+<ParamField path="a" type="Iterable<T>" required>
+  The first iterable
+</ParamField>
+
+<ParamField path="b" type="Iterable<T>" required>
+  The second iterable
+</ParamField>
+
+<ResponseField name="return" type="T[]">
+  An array of items in a but not in b
+</ResponseField>
+
+### Example
+
+```typescript
+import { difference } from "@temelj/iterator";
+
+console.log(difference([1, 2, 3], [2, 3, 4])); // [1]
+console.log(difference([1, 2, 3], [4, 5, 6])); // [1, 2, 3]
+```
+
+## filterMap
+
+Filters and maps an iterable in a single operation.
+
+<ParamField path="it" type="Iterable<T>" required>
+  The iterable to filter and map
+</ParamField>
+
+<ParamField path="filter" type="(e: T, i: number) => U | undefined" required>
+  A function that takes an element and its index, and returns the mapped element or undefined if the element should be filtered out
+</ParamField>
+
+<ResponseField name="return" type="U[]">
+  A new array containing the mapped elements that passed the filter
+</ResponseField>
+
+### Example
+
+```typescript
+import { filterMap } from "@temelj/iterator";
+
+const numbers = [1, 2, 3, 4, 5];
+
+// Keep only even numbers and double them
+const result = filterMap(numbers, (n) => {
+  if (n % 2 === 0) {
+    return n * 2;
+  }
+  return undefined;
+});
+console.log(result); // [4, 8]
+
+// Parse strings, filtering out invalid ones
+const strings = ["1", "not a number", "42"];
+const parsed = filterMap(strings, (s) => {
+  const num = parseInt(s);
+  return isNaN(num) ? undefined : num;
+});
+console.log(parsed); // [1, 42]
+```
+
+## partition
+
+Splits an iterable into two arrays based on a predicate.
+
+<ParamField path="iterable" type="Iterable<T>" required>
+  The iterable to partition
+</ParamField>
+
+<ParamField path="predicate" type="(item: T) => boolean" required>
+  A function that returns true for elements that should go in the first array
+</ParamField>
+
+<ResponseField name="return" type="[T[], T[]]">
+  A tuple of two arrays: [truthyElements, falsyElements]
+</ResponseField>
+
+### Example
+
+```typescript
+import { partition } from "@temelj/iterator";
+
+const numbers = [1, 2, 3, 4, 5, 6];
+const [even, odd] = partition(numbers, (n) => n % 2 === 0);
+
+console.log(even); // [2, 4, 6]
+console.log(odd);  // [1, 3, 5]
+
+// Partition objects
+const users = [
+  { name: "Alice", active: true },
+  { name: "Bob", active: false },
+  { name: "Charlie", active: true },
+];
+
+const [active, inactive] = partition(users, (u) => u.active);
+console.log(active);   // [{ name: "Alice", ... }, { name: "Charlie", ... }]
+console.log(inactive); // [{ name: "Bob", ... }]
+```
+
+## take
+
+Creates an iterator that yields the first n elements of the given iterable.
+
+<ParamField path="iterable" type="Iterable<T>" required>
+  The iterable to take from
+</ParamField>
+
+<ParamField path="n" type="number" required>
+  The number of elements to take
+</ParamField>
+
+<ResponseField name="return" type="T[]">
+  An array containing the first n elements
+</ResponseField>
+
+### Example
+
+```typescript
+import { take } from "@temelj/iterator";
+
+console.log(take([1, 2, 3, 4, 5], 3)); // [1, 2, 3]
+console.log(take([1, 2, 3], 5)); // [1, 2, 3]
+console.log(take([1, 2, 3], 0)); // []
+```
+
+## skip
+
+Creates an iterator that skips the first n elements of the given iterable.
+
+<ParamField path="iterable" type="Iterable<T>" required>
+  The iterable to skip from
+</ParamField>
+
+<ParamField path="n" type="number" required>
+  The number of elements to skip
+</ParamField>
+
+<ResponseField name="return" type="T[]">
+  An array containing the remaining elements after skipping n
+</ResponseField>
+
+### Example
+
+```typescript
+import { skip } from "@temelj/iterator";
+
+console.log(skip([1, 2, 3, 4, 5], 2)); // [3, 4, 5]
+console.log(skip([1, 2, 3], 5)); // []
+console.log(skip([1, 2, 3], 0)); // [1, 2, 3]
+```
+
+## takeWhile
+
+Creates an iterator that yields elements while the predicate returns true.
+
+<ParamField path="iterable" type="Iterable<T>" required>
+  The iterable to take from
+</ParamField>
+
+<ParamField path="predicate" type="(item: T) => boolean" required>
+  A function that returns true for elements to include
+</ParamField>
+
+<ResponseField name="return" type="T[]">
+  An array containing elements while the predicate was true
+</ResponseField>
+
+### Example
+
+```typescript
+import { takeWhile } from "@temelj/iterator";
+
+const numbers = [1, 2, 3, 4, 5];
+console.log(takeWhile(numbers, (x) => x < 4)); // [1, 2, 3]
+console.log(takeWhile(numbers, (x) => x > 10)); // []
+```
+
+## skipWhile
+
+Creates an iterator that skips elements while the predicate returns true.
+
+<ParamField path="iterable" type="Iterable<T>" required>
+  The iterable to skip from
+</ParamField>
+
+<ParamField path="predicate" type="(item: T) => boolean" required>
+  A function that returns true for elements to skip
+</ParamField>
+
+<ResponseField name="return" type="T[]">
+  An array containing elements after the predicate returned false
+</ResponseField>
+
+### Example
+
+```typescript
+import { skipWhile } from "@temelj/iterator";
+
+const numbers = [1, 2, 3, 4, 5];
+console.log(skipWhile(numbers, (x) => x < 4)); // [4, 5]
+console.log(skipWhile(numbers, (x) => x > 10)); // [1, 2, 3, 4, 5]
+```
+
+## find
+
+Finds the first element matching a predicate.
+
+<ParamField path="iterable" type="Iterable<T>" required>
+  The iterable to search
+</ParamField>
+
+<ParamField path="predicate" type="(item: T) => boolean" required>
+  A function that returns true for the desired element
+</ParamField>
+
+<ResponseField name="return" type="T | undefined">
+  The first matching element, or undefined if not found
+</ResponseField>
+
+### Example
+
+```typescript
+import { find } from "@temelj/iterator";
+
+const numbers = [1, 2, 3, 4, 5];
+console.log(find(numbers, (x) => x > 3)); // 4
+console.log(find(numbers, (x) => x > 10)); // undefined
+```
+
+## any
+
+Checks if any element satisfies the predicate.
+
+<ParamField path="iterable" type="Iterable<T>" required>
+  The iterable to check
+</ParamField>
+
+<ParamField path="predicate" type="(item: T) => boolean" required>
+  A function that returns true for matching elements
+</ParamField>
+
+<ResponseField name="return" type="boolean">
+  True if any element satisfies the predicate, false otherwise
+</ResponseField>
+
+### Example
+
+```typescript
+import { any } from "@temelj/iterator";
+
+console.log(any([1, 2, 3], (x) => x > 2)); // true
+console.log(any([1, 2, 3], (x) => x > 10)); // false
+```
+
+## all
+
+Checks if all elements satisfy the predicate.
+
+<ParamField path="iterable" type="Iterable<T>" required>
+  The iterable to check
+</ParamField>
+
+<ParamField path="predicate" type="(item: T) => boolean" required>
+  A function that returns true for matching elements
+</ParamField>
+
+<ResponseField name="return" type="boolean">
+  True if all elements satisfy the predicate, false otherwise
+</ResponseField>
+
+### Example
+
+```typescript
+import { all } from "@temelj/iterator";
+
+console.log(all([1, 2, 3], (x) => x > 0)); // true
+console.log(all([1, 2, 3], (x) => x > 2)); // false
+console.log(all([], (x) => x > 0)); // true (vacuous truth)
+```
+
+## count
+
+Counts the number of elements in an iterable, or counts elements matching a predicate.
+
+<ParamField path="iterable" type="Iterable<T>" required>
+  The iterable to count
+</ParamField>
+
+<ParamField path="predicate" type="(item: T) => boolean">
+  An optional predicate to filter elements
+</ParamField>
+
+<ResponseField name="return" type="number">
+  The count of elements
+</ResponseField>
+
+### Example
+
+```typescript
+import { count } from "@temelj/iterator";
+
+// Count all elements
+console.log(count([1, 2, 3, 4, 5])); // 5
+
+// Count matching elements
+console.log(count([1, 2, 3, 4, 5], (x) => x % 2 === 0)); // 2
+console.log(count([1, 2, 3], (x) => x > 10)); // 0
+```
+
+## minBy
+
+Finds the minimum element using a selector function.
+
+<ParamField path="iterable" type="Iterable<T>" required>
+  The iterable to search
+</ParamField>
+
+<ParamField path="selector" type="(item: T) => number" required>
+  A function that returns a comparable value for each element
+</ParamField>
+
+<ResponseField name="return" type="T | undefined">
+  The minimum element, or undefined if the iterable is empty
+</ResponseField>
+
+### Example
+
+```typescript
+import { minBy } from "@temelj/iterator";
+
+// Find minimum number
+console.log(minBy([3, 1, 4, 1, 5], (x) => x)); // 1
+
+// Find user with minimum age
+const users = [
+  { name: "Alice", age: 30 },
+  { name: "Bob", age: 25 },
+  { name: "Charlie", age: 35 },
+];
+console.log(minBy(users, (u) => u.age));
+// { name: "Bob", age: 25 }
+```
+
+## maxBy
+
+Finds the maximum element using a selector function.
+
+<ParamField path="iterable" type="Iterable<T>" required>
+  The iterable to search
+</ParamField>
+
+<ParamField path="selector" type="(item: T) => number" required>
+  A function that returns a comparable value for each element
+</ParamField>
+
+<ResponseField name="return" type="T | undefined">
+  The maximum element, or undefined if the iterable is empty
+</ResponseField>
+
+### Example
+
+```typescript
+import { maxBy } from "@temelj/iterator";
+
+// Find maximum number
+console.log(maxBy([3, 1, 4, 1, 5], (x) => x)); // 5
+
+// Find user with maximum age
+const users = [
+  { name: "Alice", age: 30 },
+  { name: "Bob", age: 25 },
+  { name: "Charlie", age: 35 },
+];
+console.log(maxBy(users, (u) => u.age));
+// { name: "Charlie", age: 35 }
+```

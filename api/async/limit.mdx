@@ -1,0 +1,244 @@
+---
+title: limit
+description: Wraps a function to enforce concurrency limits
+---
+
+Returns a wrapper around a function that enforces concurrency limits. All calls to the wrapper share the same concurrency pool.
+
+## Signature
+
+```typescript
+function limit<Args extends unknown[], R>(
+  fn: (...args: Args) => PromiseLike<R> | R,
+  concurrency: number,
+  options?: StandardOptions,
+): (...args: Args) => Promise<R>
+```
+
+## Parameters
+
+<ParamField path="fn" type="(...args: Args) => PromiseLike<R> | R" required>
+  The function to wrap with concurrency limiting.
+</ParamField>
+
+<ParamField path="concurrency" type="number" required>
+  Maximum number of concurrent executions allowed.
+</ParamField>
+
+<ParamField path="options" type="StandardOptions">
+  Limiting options.
+  
+  <Expandable title="properties">
+    <ParamField path="signal" type="AbortSignal">
+      Optional AbortSignal to cancel pending operations.
+    </ParamField>
+  </Expandable>
+</ParamField>
+
+## Returns
+
+<ResponseField type="(...args: Args) => Promise<R>">
+  A wrapped function that enforces the concurrency limit. Returns a promise that resolves with the result of the function.
+</ResponseField>
+
+## Throws
+
+- `AbortError` if the signal is aborted while waiting
+- Any error thrown by the wrapped function
+
+## Examples
+
+### Basic concurrency limiting
+
+```typescript
+import { limit } from '@temelj/async';
+
+async function fetchData(id: number) {
+  const response = await fetch(`/api/data/${id}`);
+  return response.json();
+}
+
+// Limit to 2 concurrent requests
+const limitedFetch = limit(fetchData, 2);
+
+// Only 2 requests run at a time
+const results = await Promise.all([
+  limitedFetch(1),
+  limitedFetch(2),
+  limitedFetch(3),
+  limitedFetch(4),
+  limitedFetch(5),
+]);
+```
+
+### Database query limiting
+
+```typescript
+import { limit } from '@temelj/async';
+
+async function queryDatabase(sql: string) {
+  return await db.query(sql);
+}
+
+// Limit to 5 concurrent database queries
+const limitedQuery = limit(queryDatabase, 5);
+
+const users = await limitedQuery('SELECT * FROM users');
+const orders = await limitedQuery('SELECT * FROM orders');
+const products = await limitedQuery('SELECT * FROM products');
+```
+
+### API rate limiting
+
+```typescript
+import { limit } from '@temelj/async';
+
+const apiCall = limit(
+  async (endpoint: string) => {
+    const response = await fetch(`https://api.example.com${endpoint}`);
+    return response.json();
+  },
+  3 // Max 3 concurrent API calls
+);
+
+// Process many requests with automatic queuing
+const endpoints = Array.from({ length: 20 }, (_, i) => `/data/${i}`);
+const results = await Promise.all(endpoints.map(ep => apiCall(ep)));
+```
+
+### File processing
+
+```typescript
+import { limit } from '@temelj/async';
+import { readFile, writeFile } from 'fs/promises';
+
+const processFile = limit(
+  async (filePath: string) => {
+    const content = await readFile(filePath, 'utf-8');
+    const processed = content.toUpperCase();
+    await writeFile(filePath + '.processed', processed);
+    return filePath;
+  },
+  4 // Process 4 files at a time
+);
+
+const files = [
+  'file1.txt',
+  'file2.txt',
+  'file3.txt',
+  // ... many more files
+];
+
+for (const file of files) {
+  await processFile(file);
+}
+```
+
+### Image processing
+
+```typescript
+import { limit } from '@temelj/async';
+
+const processImage = limit(
+  async (imageUrl: string) => {
+    const image = await loadImage(imageUrl);
+    const resized = await resizeImage(image, { width: 800, height: 600 });
+    const optimized = await optimizeImage(resized);
+    return optimized;
+  },
+  2 // Only process 2 images at a time to save memory
+);
+
+const images = await Promise.all(
+  imageUrls.map(url => processImage(url))
+);
+```
+
+### With abort signal
+
+```typescript
+import { limit } from '@temelj/async';
+
+const controller = new AbortController();
+
+const limitedTask = limit(
+  async (n: number) => {
+    await delay(1000);
+    return n * 2;
+  },
+  2,
+  { signal: controller.signal }
+);
+
+const tasks = [1, 2, 3, 4, 5].map(n => 
+  limitedTask(n).catch(error => {
+    if (error instanceof AbortError) {
+      console.log(`Task ${n} cancelled`);
+      return null;
+    }
+    throw error;
+  })
+);
+
+// Cancel after 1.5 seconds
+setTimeout(() => controller.abort(), 1500);
+
+const results = await Promise.all(tasks);
+console.log(results); // Some tasks completed, some cancelled
+```
+
+### Batch processing with progress
+
+```typescript
+import { limit } from '@temelj/async';
+
+const processItem = limit(
+  async (item: string, index: number, total: number) => {
+    const result = await expensiveOperation(item);
+    console.log(`Progress: ${index + 1}/${total}`);
+    return result;
+  },
+  3
+);
+
+const items = ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h'];
+const results = await Promise.all(
+  items.map((item, i) => processItem(item, i, items.length))
+);
+```
+
+### Resource pool simulation
+
+```typescript
+import { limit } from '@temelj/async';
+
+class ConnectionPool {
+  private limitedQuery: (sql: string) => Promise<any>;
+  
+  constructor(maxConnections: number) {
+    this.limitedQuery = limit(
+      async (sql: string) => {
+        // Simulate database query
+        console.log('Executing:', sql);
+        await delay(100);
+        return { rows: [] };
+      },
+      maxConnections
+    );
+  }
+  
+  async query(sql: string) {
+    return this.limitedQuery(sql);
+  }
+}
+
+const pool = new ConnectionPool(5);
+
+// All queries share the same pool of 5 connections
+await Promise.all([
+  pool.query('SELECT * FROM users'),
+  pool.query('SELECT * FROM orders'),
+  pool.query('SELECT * FROM products'),
+  // ... many more queries
+]);
+```

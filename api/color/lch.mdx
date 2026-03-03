@@ -1,0 +1,153 @@
+---
+title: LCH color space
+description: Convert colors between RGB and LCH color spaces
+---
+
+Utilities for working with the LCH (Lightness, Chroma, Hue) color space, which is a cylindrical representation of the LAB color space.
+
+## LchColor
+
+Interface representing a color in the LCH color space.
+
+```typescript
+interface LchColor {
+  l: number;
+  c: number;
+  h: number;
+  alpha?: number | undefined;
+}
+```
+
+### Properties
+
+<ResponseField name="l" type="number">
+  Lightness component (0-100)
+</ResponseField>
+
+<ResponseField name="c" type="number">
+  Chroma component (0+, typically 0-150)
+</ResponseField>
+
+<ResponseField name="h" type="number">
+  Hue component in degrees (0-360)
+</ResponseField>
+
+<ResponseField name="alpha" type="number | undefined">
+  Optional alpha channel (0-1)
+</ResponseField>
+
+## rgbToLch
+
+Converts an RGB color to an LCH color.
+
+```typescript
+function rgbToLch(color: Color): LchColor
+```
+
+### Parameters
+
+<ParamField path="color" type="Color" required>
+  The RGB color to convert. Must have `red`, `green`, and `blue` properties (0-255), and an optional `alpha` property (0-1).
+</ParamField>
+
+### Returns
+
+<ResponseField name="lch" type="LchColor">
+  An LCH color object with `l` (lightness), `c` (chroma), `h` (hue), and optional `alpha` properties.
+</ResponseField>
+
+### Example
+
+```typescript
+import { rgbToLch, fromRgb } from '@temelj/color';
+
+const lch = rgbToLch(fromRgb(255, 0, 0));
+// { l: 53.24, c: 104.55, h: 40.0, alpha: undefined }
+```
+
+## lchToRgb
+
+Converts an LCH color to an RGB color.
+
+```typescript
+function lchToRgb(color: LchColor): Color
+```
+
+### Parameters
+
+<ParamField path="color" type="LchColor" required>
+  The LCH color to convert. Must have `l` (lightness), `c` (chroma), and `h` (hue) properties, and an optional `alpha` property.
+</ParamField>
+
+### Returns
+
+<ResponseField name="rgb" type="Color">
+  An RGB color object with `red`, `green`, `blue`, and optional `alpha` properties.
+</ResponseField>
+
+### Example
+
+```typescript
+import { lchToRgb } from '@temelj/color';
+
+const rgb = lchToRgb({ l: 50, c: 100, h: 180 });
+// { red: 0, green: 117, blue: 136, alpha: undefined }
+```
+
+## labToLch
+
+Converts a LAB color to an LCH color.
+
+```typescript
+function labToLch(color: LabColor): LchColor
+```
+
+### Parameters
+
+<ParamField path="color" type="LabColor" required>
+  The LAB color to convert. Must have `l`, `a`, and `b` properties, and an optional `alpha` property.
+</ParamField>
+
+### Returns
+
+<ResponseField name="lch" type="LchColor">
+  An LCH color object with `l` (lightness), `c` (chroma), `h` (hue), and optional `alpha` properties.
+</ResponseField>
+
+### Example
+
+```typescript
+import { labToLch } from '@temelj/color';
+
+const lch = labToLch({ l: 50, a: 25, b: 50 });
+// { l: 50, c: 55.9, h: 63.43, alpha: undefined }
+```
+
+## lchToLab
+
+Converts an LCH color to a LAB color.
+
+```typescript
+function lchToLab(color: LchColor): LabColor
+```
+
+### Parameters
+
+<ParamField path="color" type="LchColor" required>
+  The LCH color to convert. Must have `l` (lightness), `c` (chroma), and `h` (hue) properties, and an optional `alpha` property.
+</ParamField>
+
+### Returns
+
+<ResponseField name="lab" type="LabColor">
+  A LAB color object with `l`, `a`, `b`, and optional `alpha` properties.
+</ResponseField>
+
+### Example
+
+```typescript
+import { lchToLab } from '@temelj/color';
+
+const lab = lchToLab({ l: 50, c: 100, h: 180 });
+// { l: 50, a: -100, b: 0, alpha: undefined }
+```
