@@ -1,0 +1,150 @@
+{
+  "projectType": "sdk-library",
+  "projectName": "Temelj",
+  "projectDescription": "A comprehensive standard library for TypeScript with modular utilities for async operations, color manipulation, iterators, and more.",
+  "theme": "palm",
+  "primaryColor": "#3B82F6",
+  "lightColor": "#60A5FA",
+  "darkColor": "#2563EB",
+  "navigation": {
+    "tabs": [
+      {
+        "tab": "Documentation",
+        "groups": [
+          {
+            "group": "Getting Started",
+            "pages": [
+              "introduction",
+              "installation",
+              "quickstart"
+            ]
+          },
+          {
+            "group": "Core Packages",
+            "pages": [
+              "packages/async",
+              "packages/result",
+              "packages/iterator",
+              "packages/value"
+            ]
+          },
+          {
+            "group": "Data & Utilities",
+            "pages": [
+              "packages/math",
+              "packages/string",
+              "packages/id",
+              "packages/color"
+            ]
+          },
+          {
+            "group": "Web & Templating",
+            "pages": [
+              "packages/request",
+              "packages/mdx",
+              "packages/mdx-react",
+              "packages/handlebars"
+            ]
+          },
+          {
+            "group": "Guides",
+            "pages": [
+              "guides/usage-patterns",
+              "guides/typescript-integration",
+              "guides/bundling"
+            ]
+          }
+        ]
+      },
+      {
+        "tab": "API Reference",
+        "groups": [
+          {
+            "group": "Async",
+            "pages": [
+              "api/async/retry",
+              "api/async/debounce",
+              "api/async/throttle",
+              "api/async/mutex",
+              "api/async/queue",
+              "api/async/stream"
+            ]
+          },
+          {
+            "group": "Result",
+            "pages": [
+              "api/result/types",
+              "api/result/operations"
+            ]
+          },
+          {
+            "group": "Iterator",
+            "pages": [
+              "api/iterator/combinatorics",
+              "api/iterator/filter",
+              "api/iterator/range",
+              "api/iterator/search"
+            ]
+          },
+          {
+            "group": "Color",
+            "pages": [
+              "api/color/rgb",
+              "api/color/hsl",
+              "api/color/lab",
+              "api/color/oklch",
+              "api/color/manipulation"
+            ]
+          },
+          {
+            "group": "Math",
+            "pages": [
+              "api/math/vector2",
+              "api/math/rectangle",
+              "api/math/operations"
+            ]
+          },
+          {
+            "group": "Other Modules",
+            "pages": [
+              "api/string",
+              "api/id",
+              "api/value",
+              "api/request",
+              "api/mdx",
+              "api/handlebars"
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  "keyFeatures": [
+    "Modular package architecture with 12 independent packages",
+    "Async utilities including retry, debounce, throttle, mutex, and queue",
+    "Result monad for functional error handling",
+    "Iterator utilities with combinatorics and functional operations",
+    "Color manipulation with multiple color space support (RGB, HSL, LAB, OKLCH)",
+    "Math utilities for 2D vectors and rectangles",
+    "MDX compilation and React rendering utilities",
+    "Handlebars template helpers with Zod integration",
+    "HTTP request utilities including cookie parsing",
+    "TypeScript-first design with full type safety",
+    "Available on both npm and JSR",
+    "Zero or minimal dependencies per package"
+  ],
+  "publicApiSurface": [
+    "@temelj/async: retry, debounce, throttle, delay, mutex, queue, barrier, limit, stream",
+    "@temelj/result: Result<T, E>, ok, err, isOk, isErr, map, mapErr, unwrap",
+    "@temelj/iterator: range, filter, map, combinatorics, search, tree traversal",
+    "@temelj/color: RGB, HSL, LAB, LCH, OKLAB, OKLCH color spaces with conversion",
+    "@temelj/math: Vector2, Rectangle, math operations",
+    "@temelj/string: case conversion utilities",
+    "@temelj/id: ULID and UUID4 generation",
+    "@temelj/value: type checking, value operations, record utilities",
+    "@temelj/request: cookie parsing and manipulation",
+    "@temelj/mdx: MDX compiler with plugin support",
+    "@temelj/mdx-react: React components for MDX rendering",
+    "@temelj/handlebars: Handlebars helpers and Zod integration"
+  ]
+}
