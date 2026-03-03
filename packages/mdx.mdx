@@ -1,0 +1,549 @@
+---
+title: "@temelj/mdx"
+description: "MDX processing utilities with syntax highlighting, heading IDs, and custom plugins"
+---
+
+# @temelj/mdx
+
+A comprehensive MDX processing library with built-in support for syntax highlighting, heading ID generation, frontmatter parsing, and custom plugin integration.
+
+## Installation
+
+```bash
+npm install @temelj/mdx
+```
+
+## Overview
+
+The `@temelj/mdx` package provides:
+
+- MDX compilation with frontmatter support
+- Syntax highlighting with Shiki
+- Automatic heading ID generation
+- Custom remark and rehype plugins
+- Tree processing utilities
+- Type-safe frontmatter validation with Zod
+
+## Quick start
+
+```typescript
+import { MdxCompiler } from "@temelj/mdx";
+
+const compiler = new MdxCompiler();
+
+const artifact = await compiler.compile(`
+---
+title: Hello World
+---
+
+# My Document
+
+This is **MDX** content.
+`);
+
+console.log(artifact.frontmatter); // { title: "Hello World" }
+console.log(artifact.compiled); // Compiled JavaScript function body
+```
+
+## MdxCompiler
+
+The `MdxCompiler` class is the main entry point for MDX compilation:
+
+```typescript
+class MdxCompiler {
+  constructor(mdxOptions?: MdxJsCompileOptions);
+  
+  withRemarkPlugin<TOptions>(
+    plugin: Plugin<[TOptions?], HastNode, HastNode>,
+    options?: TOptions
+  ): MdxCompiler;
+  
+  withRehypePlugin<TOptions>(
+    plugin: Plugin<[TOptions?], HastNode, HastNode>,
+    options?: TOptions
+  ): MdxCompiler;
+  
+  compile<TFrontmatterSchema extends z.ZodSchema>(
+    source: MdxSource,
+    options?: MdxCompileOptions,
+    frontmatterSchema?: TFrontmatterSchema
+  ): Promise<MdxArtifact<z.output<TFrontmatterSchema>>>;
+}
+```
+
+### Basic compilation
+
+```typescript
+import { MdxCompiler } from "@temelj/mdx";
+
+const compiler = new MdxCompiler();
+
+const artifact = await compiler.compile(
+  "# Hello\n\nWorld"
+);
+
+console.log(artifact.compiled); // JavaScript function body
+console.log(artifact.frontmatter); // {}
+```
+
+### Frontmatter-only compilation
+
+<Note>
+Set `frontmatterOnly: true` to skip MDX compilation and only parse frontmatter. This is useful for extracting metadata without processing the entire document.
+</Note>
+
+```typescript
+import { MdxCompiler } from "@temelj/mdx";
+import { z } from "zod";
+
+const compiler = new MdxCompiler();
+
+const frontmatterSchema = z.object({
+  title: z.string(),
+  published: z.boolean().default(false),
+});
+
+const artifact = await compiler.compile(
+  `
+---
+title: My Post
+published: true
+---
+
+# Content here
+  `,
+  { frontmatterOnly: true },
+  frontmatterSchema
+);
+
+console.log(artifact.frontmatter); // { title: "My Post", published: true }
+console.log(artifact.compiled); // undefined
+```
+
+## Frontmatter validation
+
+Use Zod schemas to validate and type frontmatter:
+
+```typescript
+import { MdxCompiler } from "@temelj/mdx";
+import { z } from "zod";
+
+const frontmatterSchema = z.object({
+  title: z.string(),
+  description: z.string().optional(),
+  tags: z.array(z.string()).default([]),
+  publishedAt: z.coerce.date(),
+});
+
+const compiler = new MdxCompiler();
+
+const artifact = await compiler.compile(
+  `
+---
+title: "Getting Started"
+publishedAt: "2024-01-01"
+tags: ["tutorial", "basics"]
+---
+
+# Content
+  `,
+  {},
+  frontmatterSchema
+);
+
+// TypeScript knows the frontmatter type:
+const title: string = artifact.frontmatter.title;
+const tags: string[] = artifact.frontmatter.tags;
+const date: Date = artifact.frontmatter.publishedAt;
+```
+
+<Warning>
+If the frontmatter doesn't match the schema, a `ZodError` will be thrown.
+</Warning>
+
+## Built-in plugins
+
+### Heading ID plugin
+
+Automatically adds IDs to heading elements based on their content:
+
+```typescript
+import { MdxCompiler, headingIdPlugin } from "@temelj/mdx";
+
+const compiler = new MdxCompiler()
+  .withRehypePlugin(headingIdPlugin, {
+    prefix: "h-" // Optional prefix for all IDs
+  });
+
+const artifact = await compiler.compile(`
+# Hello World
+## Getting Started
+## Getting Started
+`);
+
+// Generated IDs:
+// h-hello-world
+// h-getting-started
+// h-getting-started-1 (duplicate handling)
+```
+
+<Accordion title="How it works">
+  The plugin uses GitHub Slugger to convert heading text into URL-friendly IDs. It automatically handles duplicates by appending a number suffix.
+</Accordion>
+
+### Syntax highlighting plugin
+
+Highlight code blocks with Shiki:
+
+<CodeGroup>
+
+```typescript Basic usage
+import { MdxCompiler, syntaxHighlightPlugin } from "@temelj/mdx";
+
+const compiler = new MdxCompiler()
+  .withRehypePlugin(syntaxHighlightPlugin);
+
+const artifact = await compiler.compile(`
+\`\`\`typescript
+const greeting = "Hello, World!";
+\`\`\`
+`);
+```
+
+```typescript With options
+import { MdxCompiler, syntaxHighlightPlugin } from "@temelj/mdx";
+
+const compiler = new MdxCompiler()
+  .withRehypePlugin(syntaxHighlightPlugin, {
+    includeDataAttributes: ["language", "source-code", "line-count"],
+    highlight: {
+      transformer: {
+        classActiveLine: "hl"
+      }
+    },
+    lineNumbers: {
+      widthVariableName: "line-number-width",
+      className: "line-number"
+    },
+    commandLine: {
+      className: "line-command"
+    }
+  });
+```
+
+</CodeGroup>
+
+#### Syntax highlighting options
+
+```typescript
+interface SyntaxHighlightPluginOptions {
+  // Data attributes to include on <pre> element
+  includeDataAttributes?: ("source-code" | "language" | "line-count")[];
+  
+  // Highlight configuration
+  highlight?: {
+    transformer?: TransformerNotationHighlightOptions;
+  };
+  
+  // Line numbers configuration
+  lineNumbers?: {
+    widthVariableName?: string; // CSS variable name
+    className?: string; // Class for line numbers
+  };
+  
+  // Command line prompt configuration
+  commandLine?: {
+    className?: string; // Class for command lines
+  };
+  
+  // Shiki options
+  shikiHastOptions?: Partial<CodeToHastOptions>;
+}
+```
+
+#### Code block metadata
+
+Use JSON metadata to configure individual code blocks:
+
+````markdown
+```typescript {"highlight":"2-3", "showLineNumbers":true}
+const x = 1;
+const y = 2; // highlighted
+const z = 3; // highlighted
+```
+````
+
+Supported metadata:
+- `highlight`: Line ranges to highlight (e.g., `"1"`, `"2-4"`, `"1,3,5-7"`)
+- `showLineNumbers`: Boolean or line range for showing line numbers
+- `fileName`: Display a filename above the code block
+
+### Tree processor plugin
+
+Process MDX tree nodes with custom logic:
+
+```typescript
+import { MdxCompiler, treeProcessorPlugin } from "@temelj/mdx";
+
+let headingCount = 0;
+
+const compiler = new MdxCompiler()
+  .withRehypePlugin(treeProcessorPlugin, {
+    process: (node, index, parent) => {
+      if (node.tagName.startsWith("h")) {
+        headingCount++;
+        // Modify the node
+        node.properties.customAttr = "value";
+      }
+    }
+  });
+
+const artifact = await compiler.compile(`
+# Title 1
+## Title 2
+### Title 3
+`);
+
+console.log(headingCount); // 3
+```
+
+<Tip>
+The tree processor can be async. Return a Promise to perform async operations during tree traversal.
+</Tip>
+
+#### Async tree processing
+
+```typescript
+import { treeProcessorPlugin } from "@temelj/mdx";
+
+const compiler = new MdxCompiler()
+  .withRehypePlugin(treeProcessorPlugin, {
+    process: async (node, index, parent) => {
+      if (node.tagName === "img") {
+        // Fetch image dimensions asynchronously
+        const dimensions = await fetchImageDimensions(node.properties.src);
+        node.properties.width = dimensions.width;
+        node.properties.height = dimensions.height;
+      }
+    }
+  });
+```
+
+### Remove imports/exports plugin
+
+Remove all import and export statements from MDX:
+
+```typescript
+import { MdxCompiler, removeImportsExportsPlugin } from "@temelj/mdx";
+
+const compiler = new MdxCompiler()
+  .withRemarkPlugin(removeImportsExportsPlugin);
+
+const artifact = await compiler.compile(`
+import { Component } from './component';
+
+export const meta = { title: 'Page' };
+
+# Content
+`);
+
+// Import and export statements are removed
+```
+
+## Custom plugins
+
+Add custom remark and rehype plugins:
+
+```typescript
+import { MdxCompiler } from "@temelj/mdx";
+import type { Plugin } from "unified";
+import { visit } from "unist-util-visit";
+
+// Custom rehype plugin
+const myPlugin: Plugin = () => {
+  return (tree) => {
+    visit(tree, "element", (node) => {
+      if (node.tagName === "a") {
+        node.properties.target = "_blank";
+        node.properties.rel = "noopener noreferrer";
+      }
+    });
+  };
+};
+
+const compiler = new MdxCompiler()
+  .withRehypePlugin(myPlugin);
+```
+
+## Complete example
+
+Here's a comprehensive example combining multiple features:
+
+```typescript
+import { 
+  MdxCompiler,
+  headingIdPlugin,
+  syntaxHighlightPlugin,
+  treeProcessorPlugin,
+} from "@temelj/mdx";
+import { z } from "zod";
+
+// Define frontmatter schema
+const frontmatterSchema = z.object({
+  title: z.string(),
+  description: z.string(),
+  author: z.string().optional(),
+  tags: z.array(z.string()).default([]),
+});
+
+// Create compiler with plugins
+let headingCount = 0;
+const compiler = new MdxCompiler()
+  .withRehypePlugin(headingIdPlugin, { prefix: "content-" })
+  .withRehypePlugin(syntaxHighlightPlugin, {
+    includeDataAttributes: ["language", "line-count"],
+    highlight: { transformer: { classActiveLine: "highlight" } },
+    lineNumbers: { className: "line-num" },
+  })
+  .withRehypePlugin(treeProcessorPlugin, {
+    process: (node) => {
+      if (node.tagName.startsWith("h")) {
+        headingCount++;
+      }
+    },
+  });
+
+// Compile MDX
+const artifact = await compiler.compile(
+  `
+---
+title: Complete Guide
+description: A comprehensive example
+tags: ["mdx", "tutorial"]
+---
+
+# Introduction
+
+Welcome to the guide.
+
+## Installation
+
+\`\`\`bash {"showLineNumbers":true}
+npm install @temelj/mdx
+\`\`\`
+
+## Usage
+
+\`\`\`typescript {"highlight":"2", "showLineNumbers":true}
+import { MdxCompiler } from "@temelj/mdx";
+const compiler = new MdxCompiler();
+const result = await compiler.compile(source);
+\`\`\`
+  `,
+  {},
+  frontmatterSchema
+);
+
+console.log(artifact.frontmatter.title); // "Complete Guide"
+console.log(artifact.frontmatter.tags); // ["mdx", "tutorial"]
+console.log(headingCount); // 2
+console.log(typeof artifact.compiled); // "string"
+```
+
+## Type exports
+
+```typescript
+export class MdxCompiler {
+  constructor(mdxOptions?: MdxJsCompileOptions);
+  withRemarkPlugin<TOptions>(
+    plugin: Plugin<[TOptions?], HastNode, HastNode>,
+    options?: TOptions
+  ): MdxCompiler;
+  withRehypePlugin<TOptions>(
+    plugin: Plugin<[TOptions?], HastNode, HastNode>,
+    options?: TOptions
+  ): MdxCompiler;
+  compile<TFrontmatterSchema extends z.ZodSchema>(
+    source: MdxSource,
+    options?: MdxCompileOptions,
+    frontmatterSchema?: TFrontmatterSchema
+  ): Promise<MdxArtifact<z.output<TFrontmatterSchema>>>;
+}
+
+export type MdxSource = string | Uint8Array;
+
+export interface MdxCompileOptions {
+  frontmatterOnly?: boolean;
+  mdxOptions?: MdxJsCompileOptions;
+}
+
+export interface MdxArtifact<TFrontmatter = Record<string, unknown>> {
+  compiled?: string;
+  frontmatter: TFrontmatter;
+}
+
+export type HastNode = Node;
+export type HastElement = Element;
+
+export type MdxTreeProcessor = (
+  node: HastElement,
+  index: number,
+  parent: HastElement
+) => void | Promise<void>;
+```
+
+## Plugin exports
+
+```typescript
+// Heading ID plugin
+export const headingIdPlugin: Plugin<
+  [HeadingIdPluginOptions?],
+  HastNode,
+  HastNode
+>;
+
+export interface HeadingIdPluginOptions {
+  prefix?: string;
+}
+
+// Syntax highlighting plugin
+export const syntaxHighlightPlugin: Plugin<
+  [SyntaxHighlightPluginOptions?],
+  HastNode,
+  HastNode
+>;
+
+export interface SyntaxHighlightPluginOptions {
+  includeDataAttributes?: ("source-code" | "language" | "line-count")[];
+  highlight?: { transformer?: TransformerNotationHighlightOptions };
+  lineNumbers?: { widthVariableName?: string; className?: string };
+  commandLine?: { className?: string };
+  shikiHastOptions?: Partial<CodeToHastOptions>;
+}
+
+// Tree processor plugin
+export const treeProcessorPlugin: Plugin<
+  [TreeProcessorPluginOptions?],
+  HastNode,
+  HastNode
+>;
+
+interface TreeProcessorPluginOptions {
+  process: MdxTreeProcessor;
+}
+
+// Remove imports/exports plugin
+export const removeImportsExportsPlugin: Plugin<
+  [unknown],
+  HastNode,
+  HastNode
+>;
+```
+
+## Re-exported utilities
+
+The package re-exports commonly used remark and rehype plugins:
+
+```typescript
+export { remarkFrontmatterPlugin, remarkGfmPlugin } from "@temelj/mdx";
+```

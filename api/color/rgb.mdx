@@ -1,0 +1,200 @@
+---
+title: RGB color space
+description: Functions for working with RGB colors
+---
+
+## Types
+
+### Color
+
+Represents an RGB color.
+
+<ResponseField name="red" type="number" required>
+  The red channel value (0-255)
+</ResponseField>
+
+<ResponseField name="green" type="number" required>
+  The green channel value (0-255)
+</ResponseField>
+
+<ResponseField name="blue" type="number" required>
+  The blue channel value (0-255)
+</ResponseField>
+
+<ResponseField name="alpha" type="number">
+  The alpha channel value (0-1). Optional.
+</ResponseField>
+
+## fromRgb
+
+Creates an RGB color from the given RGB values.
+
+<ParamField path="red" type="number" required>
+  The red channel value (0-255)
+</ParamField>
+
+<ParamField path="green" type="number" required>
+  The green channel value (0-255)
+</ParamField>
+
+<ParamField path="blue" type="number" required>
+  The blue channel value (0-255)
+</ParamField>
+
+<ParamField path="alpha" type="number">
+  The alpha channel value (0-1)
+</ParamField>
+
+<ResponseField name="return" type="Color">
+  An RGB color object
+</ResponseField>
+
+### Example
+
+```typescript
+import { fromRgb } from "@temelj/color";
+
+const red = fromRgb(255, 0, 0);
+console.log(red); // { red: 255, green: 0, blue: 0 }
+
+const semiTransparentBlue = fromRgb(0, 0, 255, 0.5);
+console.log(semiTransparentBlue);
+// { red: 0, green: 0, blue: 255, alpha: 0.5 }
+```
+
+## isValidRgb
+
+Checks if a color is a valid RGB color.
+
+<ParamField path="color" type="Color" required>
+  The color to validate
+</ParamField>
+
+<ResponseField name="return" type="boolean">
+  True if the color is valid, false otherwise
+</ResponseField>
+
+### Example
+
+```typescript
+import { isValidRgb, fromRgb } from "@temelj/color";
+
+const valid = fromRgb(100, 150, 200);
+console.log(isValidRgb(valid)); // true
+
+const invalid = { red: 300, green: 150, blue: 200 };
+console.log(isValidRgb(invalid)); // false (red > 255)
+```
+
+## parseRgb
+
+Parses an RGB color string.
+
+<ParamField path="value" type="string" required>
+  The RGB color string (e.g., "rgb(255, 0, 0)" or "rgba(255, 0, 0, 0.5)")
+</ParamField>
+
+<ResponseField name="return" type="Color | undefined">
+  The parsed color, or undefined if the string is invalid
+</ResponseField>
+
+### Example
+
+```typescript
+import { parseRgb } from "@temelj/color";
+
+const color1 = parseRgb("rgb(255, 0, 0)");
+console.log(color1); // { red: 255, green: 0, blue: 0 }
+
+const color2 = parseRgb("rgba(100, 150, 200, 0.8)");
+console.log(color2);
+// { red: 100, green: 150, blue: 200, alpha: 0.8 }
+
+const invalid = parseRgb("invalid");
+console.log(invalid); // undefined
+```
+
+## toRgbString
+
+Converts a color to a CSS rgb color string.
+
+<ParamField path="color" type="Color" required>
+  The color to convert
+</ParamField>
+
+<ResponseField name="return" type="string">
+  A CSS rgb color string
+</ResponseField>
+
+### Example
+
+```typescript
+import { fromRgb, toRgbString } from "@temelj/color";
+
+const color = fromRgb(255, 100, 50);
+const str = toRgbString(color);
+console.log(str); // "rgb(255, 100, 50)"
+```
+
+## toRgbaString
+
+Converts a color to a CSS rgba color string.
+
+<ParamField path="color" type="Color" required>
+  The color to convert
+</ParamField>
+
+<ResponseField name="return" type="string">
+  A CSS rgba color string
+</ResponseField>
+
+### Example
+
+```typescript
+import { fromRgb, toRgbaString } from "@temelj/color";
+
+const color = fromRgb(255, 100, 50, 0.7);
+const str = toRgbaString(color);
+console.log(str); // "rgba(255, 100, 50, 0.7)"
+
+const opaque = fromRgb(255, 100, 50);
+const opaqueStr = toRgbaString(opaque);
+console.log(opaqueStr); // "rgba(255, 100, 50, 1)"
+```
+
+## lerpRgb
+
+Interpolates between two RGB colors.
+
+<ParamField path="a" type="Color" required>
+  The first color
+</ParamField>
+
+<ParamField path="b" type="Color" required>
+  The second color
+</ParamField>
+
+<ParamField path="t" type="number" required>
+  The interpolation factor (0-1)
+</ParamField>
+
+<ResponseField name="return" type="Color">
+  The interpolated color
+</ResponseField>
+
+### Example
+
+```typescript
+import { fromRgb, lerpRgb } from "@temelj/color";
+
+const red = fromRgb(255, 0, 0);
+const blue = fromRgb(0, 0, 255);
+
+// Midpoint between red and blue
+const purple = lerpRgb(red, blue, 0.5);
+console.log(purple); // { red: 127.5, green: 0, blue: 127.5 }
+
+// Closer to red
+const reddishPurple = lerpRgb(red, blue, 0.25);
+console.log(reddishPurple); // { red: 191.25, green: 0, blue: 63.75 }
+```

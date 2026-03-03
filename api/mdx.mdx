@@ -1,0 +1,418 @@
+---
+title: MDX compiler
+description: Compile and process MDX documents with frontmatter support
+---
+
+## Overview
+
+The MDX compiler module provides a reusable compiler for processing MDX documents with built-in support for frontmatter, GFM (GitHub Flavored Markdown), and custom remark/rehype plugins.
+
+## Types
+
+### MdxSource
+
+Represents the source content for an MDX document.
+
+```typescript
+type MdxSource = string | Uint8Array;
+```
+
+### MdxArtifact
+
+The result of compiling an MDX document.
+
+```typescript
+interface MdxArtifact<TFrontmatter = Record<string, unknown>> {
+  compiled?: string | undefined;
+  frontmatter: TFrontmatter;
+}
+```
+
+<ParamField path="compiled" type="string | undefined">
+  The compiled JavaScript code (function body). Undefined when compiling with `frontmatterOnly: true`.
+</ParamField>
+
+<ParamField path="frontmatter" type="TFrontmatter">
+  The parsed and validated frontmatter data
+</ParamField>
+
+### MdxCompileOptions
+
+Options for compiling MDX documents.
+
+```typescript
+interface MdxCompileOptions {
+  frontmatterOnly?: boolean | undefined;
+  mdxOptions?: MdxJsCompileOptions;
+}
+```
+
+<ParamField path="frontmatterOnly" type="boolean">
+  If true, only parse frontmatter without compiling the MDX content. Defaults to false.
+</ParamField>
+
+<ParamField path="mdxOptions" type="MdxJsCompileOptions">
+  Additional options passed to @mdx-js/mdx compiler
+</ParamField>
+
+### HastNode
+
+Represents a node in the HTML Abstract Syntax Tree.
+
+```typescript
+import type { Node } from "hast";
+
+type HastNode = Node;
+```
+
+### HastElement
+
+Represents an element node in the HTML Abstract Syntax Tree.
+
+```typescript
+import type { Element } from "hast";
+
+type HastElement = Element;
+```
+
+## MdxCompiler class
+
+### Constructor
+
+Creates a new MDX compiler instance.
+
+```typescript
+new MdxCompiler(mdxOptions?: MdxJsCompileOptions)
+```
+
+<ParamField path="mdxOptions" type="MdxJsCompileOptions">
+  Default options for all compilations with this compiler instance
+</ParamField>
+
+**Example:**
+
+```typescript
+import { MdxCompiler } from "@temelj/mdx";
+
+const compiler = new MdxCompiler({
+  development: process.env.NODE_ENV === "development"
+});
+```
+
+### withRemarkPlugin
+
+Adds a remark plugin to the compiler pipeline.
+
+```typescript
+withRemarkPlugin<TOptions>(
+  plugin: Plugin<[TOptions?], HastNode, HastNode>,
+  options?: TOptions
+): MdxCompiler
+```
+
+<ParamField path="plugin" type="Plugin" required>
+  The remark plugin to add
+</ParamField>
+
+<ParamField path="options" type="TOptions">
+  Optional configuration for the plugin
+</ParamField>
+
+<ResponseField name="result" type="MdxCompiler">
+  The compiler instance for chaining
+</ResponseField>
+
+**Example:**
+
+```typescript
+import { MdxCompiler } from "@temelj/mdx";
+import remarkMath from "remark-math";
+
+const compiler = new MdxCompiler()
+  .withRemarkPlugin(remarkMath);
+```
+
+### withRehypePlugin
+
+Adds a rehype plugin to the compiler pipeline.
+
+```typescript
+withRehypePlugin<TOptions>(
+  plugin: Plugin<[TOptions?], HastNode, HastNode>,
+  options?: TOptions
+): MdxCompiler
+```
+
+<ParamField path="plugin" type="Plugin" required>
+  The rehype plugin to add
+</ParamField>
+
+<ParamField path="options" type="TOptions">
+  Optional configuration for the plugin
+</ParamField>
+
+<ResponseField name="result" type="MdxCompiler">
+  The compiler instance for chaining
+</ResponseField>
+
+**Example:**
+
+```typescript
+import { MdxCompiler } from "@temelj/mdx";
+import rehypeSlug from "rehype-slug";
+import rehypeAutolinkHeadings from "rehype-autolink-headings";
+
+const compiler = new MdxCompiler()
+  .withRehypePlugin(rehypeSlug)
+  .withRehypePlugin(rehypeAutolinkHeadings, {
+    behavior: "wrap"
+  });
+```
+
+### compile
+
+Compiles an MDX document with optional frontmatter schema validation.
+
+```typescript
+compile<TFrontmatterSchema extends z.ZodSchema>(
+  source: MdxSource,
+  options?: MdxCompileOptions,
+  frontmatterSchema?: TFrontmatterSchema
+): Promise<MdxArtifact<z.output<TFrontmatterSchema>>>
+```
+
+<ParamField path="source" type="MdxSource" required>
+  The MDX source code as a string or Uint8Array
+</ParamField>
+
+<ParamField path="options" type="MdxCompileOptions">
+  Compilation options
+</ParamField>
+
+<ParamField path="frontmatterSchema" type="z.ZodSchema">
+  Optional Zod schema for validating and typing frontmatter
+</ParamField>
+
+<ResponseField name="result" type="Promise<MdxArtifact>">
+  The compiled artifact with frontmatter and optional compiled code
+</ResponseField>
+
+**Example:**
+
+```typescript
+import { MdxCompiler } from "@temelj/mdx";
+import { z } from "zod";
+
+const compiler = new MdxCompiler();
+
+const source = `---
+title: Hello World
+author: John Doe
+---
+
+# {frontmatter.title}
+
+Written by {frontmatter.author}
+`;
+
+const frontmatterSchema = z.object({
+  title: z.string(),
+  author: z.string()
+});
+
+const artifact = await compiler.compile(source, {}, frontmatterSchema);
+
+console.log(artifact.frontmatter.title); // "Hello World"
+console.log(artifact.compiled); // Compiled JavaScript function body
+```
+
+## Built-in plugins
+
+The compiler includes these plugins by default:
+
+- **remarkFrontmatterPlugin**: Parses YAML frontmatter
+- **remarkGfmPlugin**: GitHub Flavored Markdown support (tables, task lists, strikethrough, etc.)
+
+## Common use cases
+
+### Basic MDX compilation
+
+```typescript
+import { MdxCompiler } from "@temelj/mdx";
+
+const compiler = new MdxCompiler();
+
+const source = `
+# Hello World
+
+This is **MDX** content.
+`;
+
+const { compiled } = await compiler.compile(source);
+// Use compiled code with MDX runtime
+```
+
+### Frontmatter-only parsing
+
+```typescript
+import { MdxCompiler } from "@temelj/mdx";
+import { z } from "zod";
+
+const compiler = new MdxCompiler();
+
+const source = `---
+title: My Post
+date: 2024-01-01
+tags: ["typescript", "mdx"]
+---
+
+# Content here...
+`;
+
+const schema = z.object({
+  title: z.string(),
+  date: z.string(),
+  tags: z.array(z.string())
+});
+
+const { frontmatter } = await compiler.compile(
+  source,
+  { frontmatterOnly: true },
+  schema
+);
+
+console.log(frontmatter.title); // "My Post"
+console.log(frontmatter.tags);  // ["typescript", "mdx"]
+```
+
+### With custom plugins
+
+```typescript
+import { MdxCompiler } from "@temelj/mdx";
+import remarkMath from "remark-math";
+import rehypeKatex from "rehype-katex";
+import rehypePrism from "rehype-prism-plus";
+
+const compiler = new MdxCompiler()
+  .withRemarkPlugin(remarkMath)
+  .withRehypePlugin(rehypeKatex)
+  .withRehypePlugin(rehypePrism, {
+    ignoreMissing: true
+  });
+
+const source = `
+# Math Example
+
+Inline math: $E = mc^2$
+
+Block math:
+
+$$
+\\int_0^\\infty e^{-x^2} dx = \\frac{\\sqrt{\\pi}}{2}
+$$
+
+\`\`\`typescript
+const hello = "world";
+\`\`\`
+`;
+
+const { compiled } = await compiler.compile(source);
+```
+
+### Content management system
+
+```typescript
+import { MdxCompiler } from "@temelj/mdx";
+import { z } from "zod";
+import fs from "fs/promises";
+
+const postSchema = z.object({
+  title: z.string(),
+  description: z.string(),
+  publishedAt: z.string().datetime(),
+  author: z.string(),
+  tags: z.array(z.string())
+});
+
+class ContentManager {
+  private compiler = new MdxCompiler();
+
+  async loadPost(path: string) {
+    const source = await fs.readFile(path, "utf-8");
+    return await this.compiler.compile(source, {}, postSchema);
+  }
+
+  async listPosts(directory: string) {
+    const files = await fs.readdir(directory);
+    const posts = [];
+
+    for (const file of files) {
+      if (file.endsWith(".mdx")) {
+        const source = await fs.readFile(`${directory}/${file}`, "utf-8");
+        const { frontmatter } = await this.compiler.compile(
+          source,
+          { frontmatterOnly: true },
+          postSchema
+        );
+        posts.push({ file, ...frontmatter });
+      }
+    }
+
+    return posts.sort((a, b) => 
+      new Date(b.publishedAt).getTime() - new Date(a.publishedAt).getTime()
+    );
+  }
+}
+```
+
+### Static site generator
+
+```typescript
+import { MdxCompiler } from "@temelj/mdx";
+import { z } from "zod";
+
+const pageSchema = z.object({
+  title: z.string(),
+  layout: z.enum(["default", "blog", "docs"]).default("default")
+});
+
+class SiteGenerator {
+  private compiler = new MdxCompiler()
+    .withRehypePlugin(rehypeSlug)
+    .withRehypePlugin(rehypeAutolinkHeadings);
+
+  async compilePage(source: string) {
+    const { compiled, frontmatter } = await this.compiler.compile(
+      source,
+      {},
+      pageSchema
+    );
+
+    return {
+      code: compiled!,
+      meta: frontmatter
+    };
+  }
+
+  async buildSite(pages: Record<string, string>) {
+    const compiled = new Map();
+
+    for (const [path, source] of Object.entries(pages)) {
+      compiled.set(path, await this.compilePage(source));
+    }
+
+    return compiled;
+  }
+}
+```
+
+## Exported plugins
+
+```typescript
+import { 
+  remarkFrontmatterPlugin,
+  remarkGfmPlugin 
+} from "@temelj/mdx";
+
+// Use with other compilers
+```

@@ -1,0 +1,507 @@
+---
+title: "@temelj/mdx-react"
+description: "React utilities for rendering compiled MDX content with custom components"
+---
+
+# @temelj/mdx-react
+
+React utilities for rendering compiled MDX content with support for custom components and async rendering.
+
+## Installation
+
+```bash
+npm install @temelj/mdx-react @temelj/mdx
+```
+
+## Overview
+
+The `@temelj/mdx-react` package provides utilities to:
+
+- Render compiled MDX artifacts as React components
+- Provide custom components to MDX content
+- Support async MDX content rendering
+- Type-safe frontmatter and scope integration
+
+## Quick start
+
+```typescript
+import { MdxCompiler } from "@temelj/mdx";
+import { createMdxContent } from "@temelj/mdx-react";
+import React from "react";
+
+const compiler = new MdxCompiler();
+const artifact = await compiler.compile(`
+# Hello World
+
+This is **MDX** content.
+`);
+
+const content = createMdxContent({ artifact });
+
+// Render in your React app
+function App() {
+  return <div>{content}</div>;
+}
+```
+
+## createMdxContent
+
+Render synchronous MDX content as React elements:
+
+```typescript
+function createMdxContent<TFrontmatter, TScope>(
+  options: MdxContentOptions<TFrontmatter, TScope>,
+  components?: MdxContentComponents
+): React.ReactNode;
+```
+
+### Basic usage
+
+```typescript
+import { MdxCompiler } from "@temelj/mdx";
+import { createMdxContent } from "@temelj/mdx-react";
+
+const compiler = new MdxCompiler();
+const artifact = await compiler.compile(`
+# Welcome
+
+Hello from MDX!
+`);
+
+const content = createMdxContent({ artifact });
+
+// Use in React component
+function Page() {
+  return (
+    <article>
+      {content}
+    </article>
+  );
+}
+```
+
+### With custom components
+
+Provide custom React components to replace default HTML elements:
+
+```typescript
+import { MdxCompiler } from "@temelj/mdx";
+import { createMdxContent } from "@temelj/mdx-react";
+
+const compiler = new MdxCompiler();
+const artifact = await compiler.compile(`
+# Custom Heading
+
+This is a [custom link](https://example.com).
+`);
+
+const components = {
+  h1: ({ children }) => (
+    <h1 className="text-4xl font-bold text-blue-600">
+      {children}
+    </h1>
+  ),
+  a: ({ href, children }) => (
+    <a href={href} className="text-blue-500 hover:underline">
+      {children}
+    </a>
+  ),
+};
+
+const content = createMdxContent({ artifact }, components);
+
+function Page() {
+  return <article>{content}</article>;
+}
+```
+
+<Tip>
+You can override any HTML element or provide custom components for MDX-specific elements.
+</Tip>
+
+## createAsyncMdxContent
+
+Render async MDX content that may contain dynamic imports:
+
+```typescript
+function createAsyncMdxContent<TFrontmatter, TScope>(
+  options: MdxContentOptions<TFrontmatter, TScope>,
+  components?: MdxContentComponents
+): Promise<React.ReactNode>;
+```
+
+### Usage with async content
+
+```typescript
+import { MdxCompiler } from "@temelj/mdx";
+import { createAsyncMdxContent } from "@temelj/mdx-react";
+import { Suspense } from "react";
+
+const compiler = new MdxCompiler();
+const artifact = await compiler.compile(`
+# Async Content
+
+This content may use dynamic imports.
+`);
+
+async function loadContent() {
+  return await createAsyncMdxContent({ artifact });
+}
+
+function Page() {
+  const [content, setContent] = React.useState(null);
+
+  React.useEffect(() => {
+    loadContent().then(setContent);
+  }, []);
+
+  if (!content) return <div>Loading...</div>;
+
+  return <article>{content}</article>;
+}
+```
+
+<Note>
+Use `createAsyncMdxContent` when your MDX content uses dynamic imports or async operations. For most cases, `createMdxContent` is sufficient.
+</Note>
+
+## MdxContentOptions
+
+Configuration options for rendering MDX content:
+
+```typescript
+interface MdxContentOptions<TFrontmatter, TScope> {
+  // The compiled MDX artifact from MdxCompiler
+  artifact: MdxArtifact<TFrontmatter>;
+  
+  // Additional variables to inject into MDX scope
+  scope?: TScope;
+  
+  // Base URL for relative imports
+  importBaseUrl?: string;
+}
+```
+
+### Injecting scope variables
+
+Provide custom variables to your MDX content:
+
+```typescript
+import { MdxCompiler } from "@temelj/mdx";
+import { createMdxContent } from "@temelj/mdx-react";
+
+const compiler = new MdxCompiler();
+const artifact = await compiler.compile(`
+# Hello {name}
+
+You have {count} notifications.
+`);
+
+const content = createMdxContent({
+  artifact,
+  scope: {
+    name: "John",
+    count: 5,
+  },
+});
+
+// Renders: "Hello John" and "You have 5 notifications."
+```
+
+### Setting import base URL
+
+Configure the base URL for resolving relative imports:
+
+```typescript
+import { createMdxContent } from "@temelj/mdx-react";
+
+const content = createMdxContent({
+  artifact,
+  importBaseUrl: "/content/",
+});
+```
+
+<Warning>
+The `importBaseUrl` defaults to `"/"`. Set it explicitly if your MDX content uses relative imports from a different base path.
+</Warning>
+
+## Custom components
+
+The `MdxContentComponents` type allows you to override any MDX element:
+
+```typescript
+import type { MdxContentComponents } from "@temelj/mdx-react";
+
+const components: MdxContentComponents = {
+  // HTML elements
+  h1: ({ children }) => <h1 className="title">{children}</h1>,
+  h2: ({ children }) => <h2 className="subtitle">{children}</h2>,
+  p: ({ children }) => <p className="paragraph">{children}</p>,
+  a: ({ href, children }) => (
+    <a href={href} className="link" target="_blank" rel="noopener">
+      {children}
+    </a>
+  ),
+  
+  // Code blocks
+  pre: ({ children }) => (
+    <pre className="code-block">{children}</pre>
+  ),
+  code: ({ children, className }) => (
+    <code className={className}>{children}</code>
+  ),
+  
+  // Lists
+  ul: ({ children }) => <ul className="list-disc ml-6">{children}</ul>,
+  ol: ({ children }) => <ol className="list-decimal ml-6">{children}</ol>,
+  li: ({ children }) => <li className="mb-2">{children}</li>,
+  
+  // Custom components
+  Button: ({ children, onClick }) => (
+    <button onClick={onClick} className="btn">
+      {children}
+    </button>
+  ),
+};
+```
+
+### Using custom components in MDX
+
+Once you define custom components, use them in your MDX:
+
+````markdown
+# My Document
+
+This is a paragraph with a [link](https://example.com).
+
+<Button onClick={() => alert('Clicked!')}>Click Me</Button>
+
+```javascript
+const code = "highlighted";
+```
+````
+
+## Working with frontmatter
+
+Access typed frontmatter in your React components:
+
+```typescript
+import { MdxCompiler } from "@temelj/mdx";
+import { createMdxContent } from "@temelj/mdx-react";
+import { z } from "zod";
+
+const frontmatterSchema = z.object({
+  title: z.string(),
+  author: z.string(),
+  publishedAt: z.coerce.date(),
+});
+
+const compiler = new MdxCompiler();
+const artifact = await compiler.compile(
+  `
+---
+title: My Article
+author: John Doe
+publishedAt: 2024-01-01
+---
+
+# Content here
+  `,
+  {},
+  frontmatterSchema
+);
+
+function Article() {
+  const content = createMdxContent({ artifact });
+  const { title, author, publishedAt } = artifact.frontmatter;
+
+  return (
+    <article>
+      <header>
+        <h1>{title}</h1>
+        <p>By {author}</p>
+        <time dateTime={publishedAt.toISOString()}>
+          {publishedAt.toLocaleDateString()}
+        </time>
+      </header>
+      <main>{content}</main>
+    </article>
+  );
+}
+```
+
+## Complete example
+
+A comprehensive example showing compilation, custom components, and rendering:
+
+<CodeGroup>
+
+```typescript Compiler setup
+import { MdxCompiler, syntaxHighlightPlugin } from "@temelj/mdx";
+import { createMdxContent, type MdxContentComponents } from "@temelj/mdx-react";
+import { z } from "zod";
+
+// Configure compiler
+const compiler = new MdxCompiler()
+  .withRehypePlugin(syntaxHighlightPlugin, {
+    includeDataAttributes: ["language"],
+    lineNumbers: { className: "line-number" },
+  });
+
+// Define frontmatter schema
+const schema = z.object({
+  title: z.string(),
+  description: z.string(),
+  tags: z.array(z.string()).default([]),
+});
+
+// Compile MDX
+const artifact = await compiler.compile(
+  `
+---
+title: Complete Example
+description: A full MDX React example
+tags: ["react", "mdx"]
+---
+
+# {frontmatter.title}
+
+{frontmatter.description}
+
+<CustomCard title="Info">
+  This is a custom component!
+</CustomCard>
+
+\`\`\`typescript {"showLineNumbers":true}
+const example = "code";
+\`\`\`
+  `,
+  {},
+  schema
+);
+```
+
+```typescript React components
+import React from "react";
+
+// Define custom components
+const components: MdxContentComponents = {
+  h1: ({ children }) => (
+    <h1 className="text-5xl font-bold mb-4">{children}</h1>
+  ),
+  p: ({ children }) => (
+    <p className="text-gray-700 mb-4">{children}</p>
+  ),
+  pre: ({ children, ...props }) => (
+    <pre className="bg-gray-900 p-4 rounded-lg overflow-x-auto" {...props}>
+      {children}
+    </pre>
+  ),
+  CustomCard: ({ title, children }) => (
+    <div className="border border-blue-300 rounded-lg p-4 mb-4">
+      <h3 className="font-bold text-blue-600 mb-2">{title}</h3>
+      <div>{children}</div>
+    </div>
+  ),
+};
+
+// Render component
+function BlogPost() {
+  const content = createMdxContent({ artifact }, components);
+  const { title, tags } = artifact.frontmatter;
+
+  return (
+    <article className="max-w-4xl mx-auto py-8">
+      <header className="mb-8">
+        <h1 className="text-4xl font-bold">{title}</h1>
+        <div className="flex gap-2 mt-2">
+          {tags.map((tag) => (
+            <span key={tag} className="bg-gray-200 px-2 py-1 rounded text-sm">
+              {tag}
+            </span>
+          ))}
+        </div>
+      </header>
+      <main>{content}</main>
+    </article>
+  );
+}
+
+export default BlogPost;
+```
+
+</CodeGroup>
+
+## Type exports
+
+```typescript
+export function createMdxContent<
+  TFrontmatter = Record<string, unknown>,
+  TScope = unknown
+>(
+  options: MdxContentOptions<TFrontmatter, TScope>,
+  components?: MdxContentComponents
+): React.ReactNode;
+
+export function createAsyncMdxContent<
+  TFrontmatter = Record<string, unknown>,
+  TScope = unknown
+>(
+  options: MdxContentOptions<TFrontmatter, TScope>,
+  components?: MdxContentComponents
+): Promise<React.ReactNode>;
+
+interface MdxContentOptions<TFrontmatter, TScope> {
+  artifact: MdxArtifact<TFrontmatter>;
+  scope?: TScope;
+  importBaseUrl?: string;
+}
+
+export type MdxContentComponents = React.ComponentProps<
+  typeof MdxProvider
+>["components"];
+
+export type { MdxProvider };
+```
+
+## Integration with Next.js
+
+Use with Next.js App Router:
+
+```typescript
+// app/blog/[slug]/page.tsx
+import { MdxCompiler, syntaxHighlightPlugin } from "@temelj/mdx";
+import { createMdxContent } from "@temelj/mdx-react";
+import { readFile } from "fs/promises";
+import { z } from "zod";
+
+const frontmatterSchema = z.object({
+  title: z.string(),
+  description: z.string(),
+});
+
+const compiler = new MdxCompiler().withRehypePlugin(syntaxHighlightPlugin);
+
+interface PageProps {
+  params: { slug: string };
+}
+
+export default async function BlogPage({ params }: PageProps) {
+  const source = await readFile(`./content/${params.slug}.mdx`, "utf-8");
+  const artifact = await compiler.compile(source, {}, frontmatterSchema);
+  
+  const content = createMdxContent({ artifact });
+  
+  return (
+    <article>
+      <h1>{artifact.frontmatter.title}</h1>
+      <p>{artifact.frontmatter.description}</p>
+      {content}
+    </article>
+  );
+}
+```
+
+<Tip>
+The package works seamlessly with React Server Components in Next.js 13+.
+</Tip>

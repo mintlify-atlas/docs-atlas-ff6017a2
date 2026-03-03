@@ -1,0 +1,109 @@
+---
+title: throttle
+description: Creates a throttled function that limits execution frequency
+---
+
+Creates an async-aware throttled function that only invokes `fn` at most once per `intervalMs` milliseconds.
+
+## Signature
+
+```typescript
+function throttle<Args extends unknown[], R>(
+  fn: (...args: Args) => PromiseLike<R> | R,
+  intervalMs: number,
+  options?: StandardOptions,
+): (...args: Args) => Promise<R>
+```
+
+## Parameters
+
+<ParamField path="fn" type="(...args: Args) => PromiseLike<R> | R" required>
+  The function to throttle. Can be sync or async.
+</ParamField>
+
+<ParamField path="intervalMs" type="number" required>
+  The minimum interval between invocations in milliseconds.
+</ParamField>
+
+<ParamField path="options" type="StandardOptions">
+  Throttle configuration options.
+  
+  <Expandable title="properties">
+    <ParamField path="signal" type="AbortSignal">
+      Optional AbortSignal to cancel throttling.
+    </ParamField>
+  </Expandable>
+</ParamField>
+
+## Returns
+
+<ResponseField type="(...args: Args) => Promise<R>">
+  A throttled version of the function that returns a promise.
+</ResponseField>
+
+## Examples
+
+### Basic throttle
+
+```typescript
+import { throttle } from '@temelj/async';
+
+const handleScroll = throttle(async () => {
+  await updateScrollPosition();
+}, 100);
+
+window.addEventListener('scroll', handleScroll);
+```
+
+### API rate limiting
+
+```typescript
+import { throttle } from '@temelj/async';
+
+const fetchData = throttle(async (id: string) => {
+  const response = await fetch(`/api/data/${id}`);
+  return await response.json();
+}, 1000);
+
+// Only makes 1 request per second maximum
+await fetchData('1');
+await fetchData('2'); // Waits for interval
+await fetchData('3'); // Waits for interval
+```
+
+### Mouse movement tracking
+
+```typescript
+import { throttle } from '@temelj/async';
+
+const trackMouse = throttle(async (x: number, y: number) => {
+  await analytics.trackEvent('mouse_move', { x, y });
+}, 500);
+
+document.addEventListener('mousemove', (e) => {
+  trackMouse(e.clientX, e.clientY);
+});
+```
+
+### With abort signal
+
+```typescript
+import { throttle } from '@temelj/async';
+
+const controller = new AbortController();
+
+const saveProgress = throttle(
+  async (progress: number) => {
+    await api.updateProgress(progress);
+  },
+  2000,
+  { signal: controller.signal }
+);
+
+saveProgress(25);
+saveProgress(50);
+saveProgress(75);
+
+// Cancel pending saves
+controller.abort();
+```

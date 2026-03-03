@@ -1,0 +1,100 @@
+---
+title: Search functions
+description: Functions for searching and analyzing arrays
+---
+
+## arrayBinarySearch
+
+Performs a binary search on a sorted array.
+
+<ParamField path="arr" type="T[]" required>
+  The array to search (must be sorted)
+</ParamField>
+
+<ParamField path="value" type="T" required>
+  The value to search for
+</ParamField>
+
+<ParamField path="compare" type="(a: T, b: T) => number" required>
+  A function that compares two elements. Should return a negative number if a < b, zero if a === b, and a positive number if a > b
+</ParamField>
+
+<ResponseField name="return" type="Result<number, number>">
+  A Result containing the found index on success, or the index where the value should be inserted on error
+</ResponseField>
+
+### Example
+
+```typescript
+import { arrayBinarySearch } from "@temelj/iterator";
+import { unwrap, isOk } from "@temelj/result";
+
+const numbers = [1, 3, 5, 7, 9];
+
+// Successful search
+const result = arrayBinarySearch(numbers, 5, (a, b) => a - b);
+if (isOk(result)) {
+  console.log(unwrap(result)); // 2
+}
+
+// Value not found - returns insertion index
+const notFound = arrayBinarySearch(numbers, 6, (a, b) => a - b);
+if (!isOk(notFound)) {
+  console.log(notFound.error); // 3 (index where 6 should be inserted)
+}
+
+// Search in string array
+const words = ["apple", "banana", "cherry", "date"];
+const wordResult = arrayBinarySearch(
+  words,
+  "cherry",
+  (a, b) => a.localeCompare(b)
+);
+console.log(unwrap(wordResult)); // 2
+```
+
+## arrayContainsDuplicates
+
+Checks if an array contains any duplicate elements.
+
+<ParamField path="arr" type="T[]" required>
+  The array to check
+</ParamField>
+
+<ParamField path="compare" type="(a: T, b: T) => boolean">
+  An optional custom comparison function. If not provided, deepEquals will be used
+</ParamField>
+
+<ResponseField name="return" type="boolean">
+  True if the array contains any duplicates, false otherwise
+</ResponseField>
+
+### Example
+
+```typescript
+import { arrayContainsDuplicates } from "@temelj/iterator";
+
+// With primitive values
+console.log(arrayContainsDuplicates([1, 2, 3, 2])); // true
+console.log(arrayContainsDuplicates([1, 2, 3, 4])); // false
+
+// With objects (uses deep equality by default)
+const objects = [
+  { id: 1, name: "Alice" },
+  { id: 2, name: "Bob" },
+  { id: 1, name: "Alice" },
+];
+console.log(arrayContainsDuplicates(objects)); // true
+
+// With custom comparison
+const users = [
+  { id: 1, name: "Alice" },
+  { id: 2, name: "Bob" },
+  { id: 1, name: "Charlie" },
+];
+const hasDuplicateIds = arrayContainsDuplicates(
+  users,
+  (a, b) => a.id === b.id
+);
+console.log(hasDuplicateIds); // true
+```

@@ -1,0 +1,426 @@
+---
+title: "@temelj/math"
+description: "Math utilities including vector operations, rectangle manipulation, and clamping functions"
+---
+
+A collection of math utilities for common operations including 2D vector math, rectangle operations, and value clamping.
+
+## Installation
+
+```bash
+npm install @temelj/math
+```
+
+## Clamping operations
+
+Utilities for constraining numeric values within specified ranges.
+
+### clamp
+
+Clamps a value between a minimum and maximum.
+
+```typescript
+function clamp<T extends number | bigint>(x: T, min: T, max: T): T
+```
+
+<CodeGroup>
+```typescript Example
+import { clamp } from "@temelj/math";
+
+clamp(5, 0, 10);   // 5
+clamp(12, 0, 10);  // 10
+clamp(-2, 0, 10);  // 0
+```
+
+```typescript BigInt support
+import { clamp } from "@temelj/math";
+
+clamp(50n, 0n, 100n);  // 50n
+clamp(150n, 0n, 100n); // 100n
+```
+</CodeGroup>
+
+### clampWithOverflow
+
+Clamps a value with wrapping overflow behavior.
+
+```typescript
+function clampWithOverflow<T extends number | bigint>(x: T, min: T, max: T): T
+```
+
+<CodeGroup>
+```typescript Example
+import { clampWithOverflow } from "@temelj/math";
+
+clampWithOverflow(5, 0, 10);   // 5
+clampWithOverflow(12, 0, 10);  // 2
+clampWithOverflow(-2, 0, 10);  // 8
+```
+
+```typescript Use case: Circular indexing
+import { clampWithOverflow } from "@temelj/math";
+
+// Useful for wrapping array indices
+const items = ['a', 'b', 'c', 'd', 'e'];
+const index = clampWithOverflow(7, 0, items.length);
+console.log(items[index]); // 'c'
+```
+</CodeGroup>
+
+<Note>
+  `clampWithOverflow` wraps values that exceed the range back into the valid range, making it useful for circular buffers and cyclic operations.
+</Note>
+
+## Vector2
+
+A 2D vector type with comprehensive operations.
+
+### Types
+
+```typescript
+interface Vector2 {
+  x: number;
+  y: number;
+}
+```
+
+### Construction
+
+<Tabs>
+  <Tab title="of">
+    Creates a new vector from x and y coordinates.
+
+    ```typescript
+    vector2.of(x: number, y: number): Vector2
+    ```
+
+    ```typescript
+    import { vector2 } from "@temelj/math";
+
+    const v = vector2.of(10, 20);
+    // { x: 10, y: 20 }
+    ```
+  </Tab>
+
+  <Tab title="zero">
+    Creates a zero vector.
+
+    ```typescript
+    vector2.zero(): Vector2
+    ```
+
+    ```typescript
+    import { vector2 } from "@temelj/math";
+
+    const origin = vector2.zero();
+    // { x: 0, y: 0 }
+    ```
+  </Tab>
+
+  <Tab title="copy">
+    Creates a copy of a vector.
+
+    ```typescript
+    vector2.copy(v: Vector2): Vector2
+    ```
+
+    ```typescript
+    import { vector2 } from "@temelj/math";
+
+    const v1 = vector2.of(5, 10);
+    const v2 = vector2.copy(v1);
+    ```
+  </Tab>
+</Tabs>
+
+### Arithmetic operations
+
+<Tabs>
+  <Tab title="Addition">
+    ```typescript
+    vector2.plus(a: Vector2, b: Vector2): Vector2
+    vector2.add(v: Vector2, x: number, y: number): Vector2
+    ```
+
+    ```typescript
+    import { vector2 } from "@temelj/math";
+
+    const v1 = vector2.of(1, 2);
+    const v2 = vector2.of(3, 4);
+
+    vector2.plus(v1, v2);    // { x: 4, y: 6 }
+    vector2.add(v1, 10, 20); // { x: 11, y: 22 }
+    ```
+  </Tab>
+
+  <Tab title="Subtraction">
+    ```typescript
+    vector2.minus(a: Vector2, b: Vector2): Vector2
+    vector2.subtract(v: Vector2, x: number, y: number): Vector2
+    ```
+
+    ```typescript
+    import { vector2 } from "@temelj/math";
+
+    const v1 = vector2.of(10, 20);
+    const v2 = vector2.of(3, 5);
+
+    vector2.minus(v1, v2);      // { x: 7, y: 15 }
+    vector2.subtract(v1, 2, 3); // { x: 8, y: 17 }
+    ```
+  </Tab>
+
+  <Tab title="Multiplication">
+    ```typescript
+    vector2.times(a: Vector2, b: Vector2): Vector2
+    vector2.multiply(v: Vector2, x: number, y: number): Vector2
+    vector2.scale(v: Vector2, x: number): Vector2
+    ```
+
+    ```typescript
+    import { vector2 } from "@temelj/math";
+
+    const v1 = vector2.of(2, 3);
+    const v2 = vector2.of(4, 5);
+
+    vector2.times(v1, v2);      // { x: 8, y: 15 }
+    vector2.multiply(v1, 2, 3); // { x: 4, y: 9 }
+    vector2.scale(v1, 2);       // { x: 4, y: 6 }
+    ```
+  </Tab>
+
+  <Tab title="Division">
+    ```typescript
+    vector2.divided(a: Vector2, b: Vector2): Vector2
+    vector2.divide(v: Vector2, x: number, y: number): Vector2
+    ```
+
+    ```typescript
+    import { vector2 } from "@temelj/math";
+
+    const v1 = vector2.of(10, 20);
+    const v2 = vector2.of(2, 4);
+
+    vector2.divided(v1, v2);   // { x: 5, y: 5 }
+    vector2.divide(v1, 2, 2);  // { x: 5, y: 10 }
+    ```
+  </Tab>
+</Tabs>
+
+### Manipulation
+
+<Tabs>
+  <Tab title="negate">
+    Negates both components of a vector.
+
+    ```typescript
+    vector2.negate(v: Vector2): Vector2
+    ```
+
+    ```typescript
+    import { vector2 } from "@temelj/math";
+
+    const v = vector2.of(5, -10);
+    vector2.negate(v); // { x: -5, y: 10 }
+    ```
+  </Tab>
+
+  <Tab title="snap">
+    Snaps a vector to the nearest grid point.
+
+    ```typescript
+    vector2.snap(v: Vector2, size: number): Vector2
+    ```
+
+    ```typescript
+    import { vector2 } from "@temelj/math";
+
+    const v = vector2.of(23, 47);
+    vector2.snap(v, 10); // { x: 20, y: 50 }
+    ```
+  </Tab>
+
+  <Tab title="clamp">
+    Clamps vector components between min and max vectors.
+
+    ```typescript
+    vector2.clamp(v: Vector2, min: Vector2, max: Vector2): Vector2
+    vector2.clampMin(v: Vector2, min: Vector2): Vector2
+    vector2.clampMax(v: Vector2, max: Vector2): Vector2
+    ```
+
+    ```typescript
+    import { vector2 } from "@temelj/math";
+
+    const v = vector2.of(15, -5);
+    const min = vector2.of(0, 0);
+    const max = vector2.of(10, 10);
+
+    vector2.clamp(v, min, max);    // { x: 10, y: 0 }
+    vector2.clampMin(v, min);      // { x: 15, y: 0 }
+    vector2.clampMax(v, max);      // { x: 10, y: -5 }
+    ```
+  </Tab>
+</Tabs>
+
+### Utility
+
+```typescript
+vector2.equals(a: Vector2, b: Vector2): boolean
+vector2.displayString(v: Vector2): string
+```
+
+```typescript
+import { vector2 } from "@temelj/math";
+
+const v1 = vector2.of(5, 10);
+const v2 = vector2.of(5, 10);
+const v3 = vector2.of(3, 7);
+
+vector2.equals(v1, v2); // true
+vector2.equals(v1, v3); // false
+
+vector2.displayString(v1); // "Vector2(5, 10)"
+```
+
+## Rectangle
+
+Rectangle type and operations for 2D bounding boxes.
+
+### Types
+
+```typescript
+interface Rectangle {
+  position: Vector2;
+  size: Vector2;
+}
+```
+
+### Construction
+
+<Tabs>
+  <Tab title="of">
+    Creates a rectangle from position and size vectors.
+
+    ```typescript
+    rectangle.of(position: Vector2, size: Vector2): Rectangle
+    ```
+
+    ```typescript
+    import { rectangle, vector2 } from "@temelj/math";
+
+    const rect = rectangle.of(
+      vector2.of(10, 20),
+      vector2.of(100, 50)
+    );
+    ```
+  </Tab>
+
+  <Tab title="ofBounds">
+    Creates a rectangle from explicit bounds.
+
+    ```typescript
+    rectangle.ofBounds(x: number, y: number, width: number, height: number): Rectangle
+    ```
+
+    ```typescript
+    import { rectangle } from "@temelj/math";
+
+    const rect = rectangle.ofBounds(10, 20, 100, 50);
+    // position: { x: 10, y: 20 }
+    // size: { x: 100, y: 50 }
+    ```
+  </Tab>
+
+  <Tab title="fromDOM">
+    Creates a rectangle from a DOM DOMRect object.
+
+    ```typescript
+    rectangle.fromDOM(rect: DOMRect): Rectangle
+    ```
+
+    ```typescript
+    import { rectangle } from "@temelj/math";
+
+    const element = document.getElementById('myElement');
+    const domRect = element.getBoundingClientRect();
+    const rect = rectangle.fromDOM(domRect);
+    ```
+  </Tab>
+</Tabs>
+
+### Operations
+
+<Tabs>
+  <Tab title="expand">
+    Expands rectangle to include another rectangle.
+
+    ```typescript
+    rectangle.expand(a: Rectangle, b: Rectangle): Rectangle
+    ```
+
+    ```typescript
+    import { rectangle } from "@temelj/math";
+
+    const rect1 = rectangle.ofBounds(0, 0, 100, 100);
+    const rect2 = rectangle.ofBounds(50, 50, 100, 100);
+
+    const expanded = rectangle.expand(rect1, rect2);
+    // position: { x: 0, y: 0 }
+    // size: { x: 150, y: 150 }
+    ```
+  </Tab>
+
+  <Tab title="center">
+    Gets the center point of a rectangle.
+
+    ```typescript
+    rectangle.center(r: Rectangle): Vector2
+    ```
+
+    ```typescript
+    import { rectangle } from "@temelj/math";
+
+    const rect = rectangle.ofBounds(0, 0, 100, 50);
+    const center = rectangle.center(rect);
+    // { x: 50, y: 25 }
+    ```
+  </Tab>
+
+  <Tab title="overlaps">
+    Checks if two rectangles overlap.
+
+    ```typescript
+    rectangle.overlaps(a: Rectangle, b: Rectangle): boolean
+    ```
+
+    ```typescript
+    import { rectangle } from "@temelj/math";
+
+    const rect1 = rectangle.ofBounds(0, 0, 100, 100);
+    const rect2 = rectangle.ofBounds(50, 50, 100, 100);
+    const rect3 = rectangle.ofBounds(200, 200, 50, 50);
+
+    rectangle.overlaps(rect1, rect2); // true
+    rectangle.overlaps(rect1, rect3); // false
+    ```
+  </Tab>
+</Tabs>
+
+### Utility
+
+```typescript
+rectangle.displayString(r: Rectangle): string
+```
+
+```typescript
+import { rectangle } from "@temelj/math";
+
+const rect = rectangle.ofBounds(10, 20, 100, 50);
+rectangle.displayString(rect);
+// "Rectangle(10, 20, 100, 50)"
+```
+
+<Tip>
+  All vector and rectangle operations are immutable - they return new objects rather than modifying existing ones.
+</Tip>

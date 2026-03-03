@@ -1,0 +1,308 @@
+---
+title: String utilities
+description: String manipulation and case conversion functions
+---
+
+## Overview
+
+The string utilities module provides functions for converting between different naming conventions and manipulating text.
+
+## Case conversion
+
+### toCamelCase
+
+Converts a string to camelCase.
+
+```typescript
+function toCamelCase(s: string, options?: ConvertCaseOptions): string
+```
+
+<ParamField path="s" type="string" required>
+  The string to convert
+</ParamField>
+
+<ParamField path="options" type="ConvertCaseOptions">
+  Optional configuration for custom splitting behavior
+</ParamField>
+
+<ResponseField name="result" type="string">
+  The string converted to camelCase
+</ResponseField>
+
+**Example:**
+
+```typescript
+import { toCamelCase } from "@temelj/string";
+
+console.log(toCamelCase("hello world"));        // "helloWorld"
+console.log(toCamelCase("user_first_name"));    // "userFirstName"
+console.log(toCamelCase("API-Response-Data")); // "apiResponseData"
+```
+
+### toSnakeCase
+
+Converts a string to snake_case.
+
+```typescript
+function toSnakeCase(s: string, options?: ConvertCaseOptions): string
+```
+
+<ParamField path="s" type="string" required>
+  The string to convert
+</ParamField>
+
+<ParamField path="options" type="ConvertCaseOptions">
+  Optional configuration for custom splitting behavior
+</ParamField>
+
+<ResponseField name="result" type="string">
+  The string converted to snake_case
+</ResponseField>
+
+**Example:**
+
+```typescript
+import { toSnakeCase } from "@temelj/string";
+
+console.log(toSnakeCase("helloWorld"));        // "hello_world"
+console.log(toSnakeCase("UserFirstName"));     // "user_first_name"
+console.log(toSnakeCase("API Response Data")); // "api_response_data"
+```
+
+### toPascalCase
+
+Converts a string to PascalCase.
+
+```typescript
+function toPascalCase(s: string, options?: ConvertCaseOptions): string
+```
+
+<ParamField path="s" type="string" required>
+  The string to convert
+</ParamField>
+
+<ParamField path="options" type="ConvertCaseOptions">
+  Optional configuration for custom splitting behavior
+</ParamField>
+
+<ResponseField name="result" type="string">
+  The string converted to PascalCase
+</ResponseField>
+
+**Example:**
+
+```typescript
+import { toPascalCase } from "@temelj/string";
+
+console.log(toPascalCase("hello world"));      // "HelloWorld"
+console.log(toPascalCase("user_first_name"));  // "UserFirstName"
+console.log(toPascalCase("api-response-data"));// "ApiResponseData"
+```
+
+### toKebabCase
+
+Converts a string to kebab-case.
+
+```typescript
+function toKebabCase(s: string, options?: ConvertCaseOptions): string
+```
+
+<ParamField path="s" type="string" required>
+  The string to convert
+</ParamField>
+
+<ParamField path="options" type="ConvertCaseOptions">
+  Optional configuration for custom splitting behavior
+</ParamField>
+
+<ResponseField name="result" type="string">
+  The string converted to kebab-case
+</ResponseField>
+
+**Example:**
+
+```typescript
+import { toKebabCase } from "@temelj/string";
+
+console.log(toKebabCase("helloWorld"));        // "hello-world"
+console.log(toKebabCase("UserFirstName"));     // "user-first-name"
+console.log(toKebabCase("API Response Data")); // "api-response-data"
+```
+
+### toTitleCase
+
+Converts a string to Title Case.
+
+```typescript
+function toTitleCase(s: string, options?: ConvertCaseOptions): string
+```
+
+<ParamField path="s" type="string" required>
+  The string to convert
+</ParamField>
+
+<ParamField path="options" type="ConvertCaseOptions">
+  Optional configuration for custom splitting behavior
+</ParamField>
+
+<ResponseField name="result" type="string">
+  The string converted to Title Case with spaces
+</ResponseField>
+
+**Example:**
+
+```typescript
+import { toTitleCase } from "@temelj/string";
+
+console.log(toTitleCase("helloWorld"));        // "Hello World"
+console.log(toTitleCase("user_first_name"));   // "User First Name"
+console.log(toTitleCase("api-response-data")); // "Api Response Data"
+```
+
+## Text manipulation
+
+### capitalize
+
+Capitalizes the first letter of a string and lowercases the rest.
+
+```typescript
+function capitalize(s: string): string
+```
+
+<ParamField path="s" type="string" required>
+  The string to capitalize
+</ParamField>
+
+<ResponseField name="result" type="string">
+  The capitalized string
+</ResponseField>
+
+**Example:**
+
+```typescript
+import { capitalize } from "@temelj/string";
+
+console.log(capitalize("hello"));   // "Hello"
+console.log(capitalize("WORLD"));   // "World"
+console.log(capitalize("aPi"));     // "Api"
+console.log(capitalize(""));        // ""
+```
+
+### caseSplit
+
+Splits a string into parts based on case changes and delimiters.
+
+```typescript
+function caseSplit(s: string, options?: ConvertCaseOptions): string[]
+```
+
+<ParamField path="s" type="string" required>
+  The string to split
+</ParamField>
+
+<ParamField path="options" type="ConvertCaseOptions">
+  Optional configuration with custom split function
+</ParamField>
+
+<ResponseField name="result" type="string[]">
+  Array of lowercase word parts
+</ResponseField>
+
+**Splitting rules:**
+
+- Splits on spaces, dots, underscores, and hyphens
+- Splits on case changes (camelCase to parts)
+- Preserves numbers as separate parts
+
+**Example:**
+
+```typescript
+import { caseSplit } from "@temelj/string";
+
+console.log(caseSplit("helloWorld"));       // ["hello", "world"]
+console.log(caseSplit("user_first_name"));  // ["user", "first", "name"]
+console.log(caseSplit("API-Response"));     // ["api", "response"]
+console.log(caseSplit("version2Update"));   // ["version", "2", "update"]
+```
+
+## Configuration
+
+### ConvertCaseOptions
+
+Options for customizing case conversion behavior.
+
+```typescript
+interface ConvertCaseOptions {
+  split?: (s: string) => string[];
+}
+```
+
+<ParamField path="split" type="(s: string) => string[]">
+  Custom function to split a string into parts before conversion
+</ParamField>
+
+**Example with custom splitter:**
+
+```typescript
+import { toCamelCase } from "@temelj/string";
+
+// Split only on slashes
+const result = toCamelCase("user/api/endpoint", {
+  split: (s) => s.split("/")
+});
+console.log(result); // "userApiEndpoint"
+```
+
+## Common use cases
+
+### API key transformation
+
+```typescript
+import { toCamelCase, toSnakeCase } from "@temelj/string";
+
+// Convert API response keys from snake_case to camelCase
+function transformKeys(obj: Record<string, any>): Record<string, any> {
+  return Object.fromEntries(
+    Object.entries(obj).map(([key, value]) => [
+      toCamelCase(key),
+      value
+    ])
+  );
+}
+
+// Convert to database column names
+function toDatabaseKeys(obj: Record<string, any>): Record<string, any> {
+  return Object.fromEntries(
+    Object.entries(obj).map(([key, value]) => [
+      toSnakeCase(key),
+      value
+    ])
+  );
+}
+```
+
+### CSS class name generation
+
+```typescript
+import { toKebabCase } from "@temelj/string";
+
+function generateClassName(componentName: string, modifier?: string): string {
+  const base = toKebabCase(componentName);
+  return modifier ? `${base}--${toKebabCase(modifier)}` : base;
+}
+
+console.log(generateClassName("UserProfile"));           // "user-profile"
+console.log(generateClassName("UserProfile", "Active")); // "user-profile--active"
+```
+
+### Type name generation
+
+```typescript
+import { toPascalCase } from "@temelj/string";
+
+function generateTypeName(tableName: string): string {
+  return `${toPascalCase(tableName)}Model`;
+}
+
+console.log(generateTypeName("user_profiles")); // "UserProfilesModel"
+```

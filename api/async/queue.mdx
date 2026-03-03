@@ -1,0 +1,304 @@
+---
+title: Queue
+description: Task queue with priority support and concurrency control
+---
+
+A class-based task runner with priority support and concurrency control.
+
+## Constructor
+
+```typescript
+const queue = new Queue(options?: QueueOptions);
+```
+
+### Parameters
+
+<ParamField path="options" type="QueueOptions">
+  Queue configuration options.
+  
+  <Expandable title="properties">
+    <ParamField path="concurrency" type="number" default="Infinity">
+      Maximum number of tasks to run concurrently.
+    </ParamField>
+    
+    <ParamField path="autoStart" type="boolean" default="true">
+      Whether to automatically start processing tasks. Set to `false` to manually control with `pause()` and `resume()`.
+    </ParamField>
+  </Expandable>
+</ParamField>
+
+## Methods
+
+### add
+
+Adds a task to the queue. Supports optional priority (higher executes sooner).
+
+```typescript
+add<T>(fn: () => PromiseLike<T> | T, options?: AddOptions): Promise<T>
+```
+
+#### Parameters
+
+<ParamField path="fn" type="() => PromiseLike<T> | T" required>
+  The task function to execute.
+</ParamField>
+
+<ParamField path="options" type="AddOptions">
+  Task options.
+  
+  <Expandable title="properties">
+    <ParamField path="priority" type="number" default="0">
+      Task priority. Higher values execute sooner.
+    </ParamField>
+    
+    <ParamField path="signal" type="AbortSignal">
+      Optional AbortSignal to cancel the task.
+    </ParamField>
+  </Expandable>
+</ParamField>
+
+#### Returns
+
+<ResponseField type="Promise<T>">
+  A promise that resolves with the result of the task.
+</ResponseField>
+
+### addAll
+
+Adds multiple tasks to the queue.
+
+```typescript
+addAll<T>(fns: (() => Promise<T>)[], options?: AddOptions): Promise<T[]>
+```
+
+#### Parameters
+
+<ParamField path="fns" type="(() => Promise<T>)[]" required>
+  Array of task functions to execute.
+</ParamField>
+
+<ParamField path="options" type="AddOptions">
+  Options applied to all tasks.
+</ParamField>
+
+#### Returns
+
+<ResponseField type="Promise<T[]>">
+  A promise that resolves with an array of all task results.
+</ResponseField>
+
+### pause
+
+Pauses execution. Active tasks continue, pending tasks wait.
+
+```typescript
+pause(): void
+```
+
+### resume
+
+Resumes execution of pending tasks.
+
+```typescript
+resume(): void
+```
+
+### clear
+
+Clears all pending tasks. Active tasks are not affected.
+
+```typescript
+clear(): void
+```
+
+## Properties
+
+### size
+
+Number of items waiting to run.
+
+```typescript
+get size(): number
+```
+
+### pending
+
+Number of items currently running.
+
+```typescript
+get pending(): number
+```
+
+### onIdle
+
+Promise that resolves when the queue is empty and all tasks have completed.
+
+```typescript
+get onIdle(): Promise<void>
+```
+
+## Examples
+
+### Basic queue
+
+```typescript
+import { Queue } from '@temelj/async';
+
+const queue = new Queue({ concurrency: 2 });
+
+const results = await Promise.all([
+  queue.add(() => fetchData(1)),
+  queue.add(() => fetchData(2)),
+  queue.add(() => fetchData(3)),
+  queue.add(() => fetchData(4)),
+]);
+
+console.log(results);
+```
+
+### Priority queue
+
+```typescript
+import { Queue } from '@temelj/async';
+
+const queue = new Queue({ concurrency: 1 });
+
+queue.add(() => console.log('Low priority'), { priority: 0 });
+queue.add(() => console.log('High priority'), { priority: 10 });
+queue.add(() => console.log('Medium priority'), { priority: 5 });
+
+// Output:
+// High priority
+// Medium priority
+// Low priority
+```
+
+### Wait for completion
+
+```typescript
+import { Queue } from '@temelj/async';
+
+const queue = new Queue({ concurrency: 2 });
+
+queue.add(async () => {
+  await delay(100);
+  console.log('Task 1');
+});
+
+queue.add(async () => {
+  await delay(50);
+  console.log('Task 2');
+});
+
+// Wait for all tasks to complete
+await queue.onIdle;
+console.log('All tasks done');
+```
+
+### Pause and resume
+
+```typescript
+import { Queue } from '@temelj/async';
+
+const queue = new Queue({ concurrency: 1 });
+
+queue.add(() => console.log('Task 1'));
+queue.add(() => console.log('Task 2'));
+
+queue.pause();
+console.log('Queue paused');
+
+queue.add(() => console.log('Task 3'));
+
+setTimeout(() => {
+  console.log('Resuming queue');
+  queue.resume();
+}, 1000);
+```
+
+### Manual start control
+
+```typescript
+import { Queue } from '@temelj/async';
+
+const queue = new Queue({ 
+  concurrency: 2,
+  autoStart: false 
+});
+
+// Add tasks while paused
+queue.add(() => fetchData(1));
+queue.add(() => fetchData(2));
+queue.add(() => fetchData(3));
+
+console.log(`${queue.size} tasks queued`);
+
+// Start processing when ready
+queue.resume();
+```
+
+### With abort signal
+
+```typescript
+import { Queue } from '@temelj/async';
+
+const queue = new Queue({ concurrency: 2 });
+const controller = new AbortController();
+
+const task1 = queue.add(
+  async () => {
+    await delay(1000);
+    return 'Done';
+  },
+  { signal: controller.signal }
+);
+
+// Cancel task
+controller.abort();
+
+try {
+  await task1;
+} catch (error) {
+  console.log('Task cancelled');
+}
+```
+
+### Rate-limited API calls
+
+```typescript
+import { Queue } from '@temelj/async';
+
+const queue = new Queue({ concurrency: 5 });
+
+const userIds = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10];
+
+const users = await queue.addAll(
+  userIds.map(id => async () => {
+    const response = await fetch(`/api/users/${id}`);
+    return await response.json();
+  })
+);
+
+console.log(`Fetched ${users.length} users`);
+```
+
+### Clear pending tasks
+
+```typescript
+import { Queue } from '@temelj/async';
+
+const queue = new Queue({ concurrency: 1 });
+
+queue.add(async () => {
+  await delay(100);
+  console.log('This will run');
+});
+
+queue.add(() => console.log('This will be cleared'));
+queue.add(() => console.log('This will be cleared too'));
+
+queue.clear();
+
+await queue.onIdle;
+console.log('Done');
+```

@@ -1,0 +1,124 @@
+---
+title: retry
+description: Retries a function upon failure with configurable backoff
+---
+
+Retries an async function upon failure with configurable backoff and retry logic.
+
+## Signature
+
+```typescript
+async function retry<T>(
+  fn: (attempt: number) => Promise<T>,
+  options?: RetryOptions,
+): Promise<T>
+```
+
+## Parameters
+
+<ParamField path="fn" type="(attempt: number) => Promise<T>" required>
+  The async function to retry. Receives the current attempt number (0-indexed).
+</ParamField>
+
+<ParamField path="options" type="RetryOptions">
+  Retry configuration options.
+  
+  <Expandable title="properties">
+    <ParamField path="times" type="number" default="3">
+      Maximum number of attempts.
+    </ParamField>
+    
+    <ParamField path="delay" type="number | (attempt: number) => number">
+      Delay between retries in milliseconds, or a function computing the delay from the attempt number (0-indexed).
+    </ParamField>
+    
+    <ParamField path="shouldRetry" type="(error: unknown) => boolean">
+      Predicate to decide whether to retry on a given error. If it returns `false`, the error is thrown immediately.
+    </ParamField>
+    
+    <ParamField path="signal" type="AbortSignal">
+      Optional AbortSignal to cancel the retry operation.
+    </ParamField>
+  </Expandable>
+</ParamField>
+
+## Returns
+
+<ResponseField type="Promise<T>">
+  A promise that resolves with the result of the function on success.
+</ResponseField>
+
+## Throws
+
+- The last error if all attempts are exhausted
+- `AbortError` if the signal is aborted
+
+## Examples
+
+### Basic retry
+
+```typescript
+import { retry } from '@temelj/async';
+
+const result = await retry(async () => {
+  return await fetchData();
+}, { times: 3 });
+```
+
+### Exponential backoff
+
+```typescript
+import { retry } from '@temelj/async';
+
+const result = await retry(
+  async (attempt) => {
+    console.log(`Attempt ${attempt + 1}`);
+    return await fetchData();
+  },
+  {
+    times: 5,
+    delay: (attempt) => Math.pow(2, attempt) * 1000, // 1s, 2s, 4s, 8s
+  }
+);
+```
+
+### Conditional retry
+
+```typescript
+import { retry } from '@temelj/async';
+
+const result = await retry(
+  async () => {
+    return await fetchData();
+  },
+  {
+    times: 3,
+    shouldRetry: (error) => {
+      // Only retry on network errors, not 4xx errors
+      return error instanceof NetworkError;
+    },
+  }
+);
+```
+
+### With abort signal
+
+```typescript
+import { retry } from '@temelj/async';
+
+const controller = new AbortController();
+
+const result = await retry(
+  async () => {
+    return await fetchData();
+  },
+  {
+    times: 5,
+    delay: 1000,
+    signal: controller.signal,
+  }
+);
+
+// Cancel retry
+controller.abort();
+```

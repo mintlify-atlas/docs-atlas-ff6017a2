@@ -1,0 +1,191 @@
+---
+title: Mutex
+description: Mutual exclusion lock for coordinating async operations
+---
+
+A mutual exclusion lock that ensures only one task accesses a resource at a time.
+
+## Constructor
+
+```typescript
+const mutex = new Mutex();
+```
+
+## Methods
+
+### acquire
+
+Acquires the lock. Returns a release function that must be called to unlock.
+
+```typescript
+acquire(signal?: AbortSignal): Promise<() => void>
+```
+
+#### Parameters
+
+<ParamField path="signal" type="AbortSignal">
+  Optional AbortSignal to cancel waiting for the lock.
+</ParamField>
+
+#### Returns
+
+<ResponseField type="Promise<() => void>">
+  A promise that resolves with a release function. Call the release function to unlock the mutex.
+</ResponseField>
+
+#### Throws
+
+- `AbortError` if the signal is aborted while waiting
+
+### runExclusive
+
+Acquires the lock, runs the function exclusively, and automatically releases the lock.
+
+```typescript
+runExclusive<T>(fn: () => Promise<T>, signal?: AbortSignal): Promise<T>
+```
+
+#### Parameters
+
+<ParamField path="fn" type="() => Promise<T>" required>
+  The function to run exclusively.
+</ParamField>
+
+<ParamField path="signal" type="AbortSignal">
+  Optional AbortSignal to cancel waiting for the lock.
+</ParamField>
+
+#### Returns
+
+<ResponseField type="Promise<T>">
+  A promise that resolves with the result of the function.
+</ResponseField>
+
+## Examples
+
+### Basic usage with acquire/release
+
+```typescript
+import { Mutex } from '@temelj/async';
+
+const mutex = new Mutex();
+let sharedResource = 0;
+
+async function incrementSafely() {
+  const release = await mutex.acquire();
+  try {
+    // Critical section
+    const current = sharedResource;
+    await delay(10);
+    sharedResource = current + 1;
+  } finally {
+    release();
+  }
+}
+
+// Safe concurrent execution
+await Promise.all([
+  incrementSafely(),
+  incrementSafely(),
+  incrementSafely(),
+]);
+
+console.log(sharedResource); // 3
+```
+
+### Using runExclusive
+
+```typescript
+import { Mutex } from '@temelj/async';
+
+const mutex = new Mutex();
+let balance = 100;
+
+async function withdraw(amount: number) {
+  return await mutex.runExclusive(async () => {
+    if (balance >= amount) {
+      await delay(10); // Simulate async operation
+      balance -= amount;
+      return true;
+    }
+    return false;
+  });
+}
+
+// Prevents race conditions
+const results = await Promise.all([
+  withdraw(60),
+  withdraw(60),
+]);
+
+console.log(results); // [true, false]
+console.log(balance); // 40
+```
+
+### Database connection pool
+
+```typescript
+import { Mutex } from '@temelj/async';
+
+class Database {
+  private mutex = new Mutex();
+  private connection: Connection | null = null;
+
+  async query(sql: string) {
+    return await this.mutex.runExclusive(async () => {
+      if (!this.connection) {
+        this.connection = await createConnection();
+      }
+      return await this.connection.execute(sql);
+    });
+  }
+}
+```
+
+### With abort signal
+
+```typescript
+import { Mutex } from '@temelj/async';
+
+const mutex = new Mutex();
+const controller = new AbortController();
+
+try {
+  const result = await mutex.runExclusive(
+    async () => {
+      return await longRunningTask();
+    },
+    controller.signal
+  );
+} catch (error) {
+  if (error instanceof AbortError) {
+    console.log('Lock acquisition cancelled');
+  }
+}
+
+// Cancel if taking too long
+setTimeout(() => controller.abort(), 5000);
+```
+
+### File writing coordination
+
+```typescript
+import { Mutex } from '@temelj/async';
+import { writeFile } from 'fs/promises';
+
+const fileMutex = new Mutex();
+
+async function appendToLog(message: string) {
+  await fileMutex.runExclusive(async () => {
+    const existing = await readFile('log.txt', 'utf-8');
+    await writeFile('log.txt', existing + message + '\n');
+  });
+}
+
+// Safe concurrent logging
+await Promise.all([
+  appendToLog('Event 1'),
+  appendToLog('Event 2'),
+  appendToLog('Event 3'),
+]);
+```

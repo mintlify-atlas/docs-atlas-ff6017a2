@@ -1,0 +1,438 @@
+---
+title: "@temelj/result"
+description: "Result type utilities for error handling without exceptions"
+---
+
+The `@temelj/result` package provides a Result monad for functional error handling in TypeScript. It allows you to handle errors explicitly without using try-catch blocks, making error handling more predictable and type-safe.
+
+## Installation
+
+```bash
+npm install @temelj/result
+```
+
+## Result type
+
+A `Result<T, E>` represents either a success (`Ok`) or a failure (`Err`).
+
+```typescript
+type Result<T, E> = ResultOk<T> | ResultErr<E>
+
+interface ResultOk<T> {
+  readonly kind: "ok";
+  readonly value: T;
+}
+
+interface ResultErr<E> {
+  readonly kind: "error";
+  readonly error: E;
+}
+```
+
+## Creating results
+
+### ok
+
+Creates a success result.
+
+```typescript
+function ok<T>(value: T): ResultOk<T>
+```
+
+```typescript
+import { ok } from "@temelj/result";
+
+const result = ok(42);
+// Result: { kind: "ok", value: 42 }
+```
+
+### err
+
+Creates an error result.
+
+```typescript
+function err<E>(error: E): ResultErr<E>
+```
+
+```typescript
+import { err } from "@temelj/result";
+
+const result = err("Something went wrong");
+// Result: { kind: "error", error: "Something went wrong" }
+```
+
+## Type guards
+
+### isOk
+
+Checks if a result is a success.
+
+```typescript
+function isOk<T, E>(result: Result<T, E>): result is ResultOk<T>
+```
+
+```typescript
+import { isOk, ok, err } from "@temelj/result";
+
+const result = ok(42);
+
+if (isOk(result)) {
+  console.log(result.value); // TypeScript knows this is ResultOk<number>
+}
+```
+
+### isErr
+
+Checks if a result is an error.
+
+```typescript
+function isErr<T, E>(result: Result<T, E>): result is ResultErr<E>
+```
+
+```typescript
+import { isErr, ok, err } from "@temelj/result";
+
+const result = err("Failed");
+
+if (isErr(result)) {
+  console.error(result.error); // TypeScript knows this is ResultErr<string>
+}
+```
+
+## Unwrapping results
+
+### unwrap
+
+Extracts the value from a success result, or throws if it's an error.
+
+```typescript
+function unwrap<T, E>(result: Result<T, E>): T
+```
+
+<Warning>
+`unwrap` throws the error if the result is an error. Use only when you're certain the result is Ok.
+</Warning>
+
+```typescript
+import { unwrap, ok, err } from "@temelj/result";
+
+const result = ok(42);
+console.log(unwrap(result)); // 42
+
+const errorResult = err("Failed");
+unwrap(errorResult); // Throws "Failed"
+```
+
+### unwrapErr
+
+Extracts the error from an error result, or throws if it's a success.
+
+```typescript
+function unwrapErr<T, E>(result: Result<T, E>): E
+```
+
+```typescript
+import { unwrapErr, err } from "@temelj/result";
+
+const result = err("Something went wrong");
+console.log(unwrapErr(result)); // "Something went wrong"
+```
+
+### unwrapOr
+
+Extracts the value from a success result, or returns a default value if it's an error.
+
+```typescript
+function unwrapOr<T, E>(
+  result: Result<T, E>,
+  defaultValue: T | (() => T),
+): T
+```
+
+<CodeGroup>
+```typescript Static default
+import { unwrapOr, err } from "@temelj/result";
+
+const result = err("Failed");
+const value = unwrapOr(result, 0);
+// value: 0
+```
+
+```typescript Function default
+import { unwrapOr, err } from "@temelj/result";
+
+const result = err("Failed");
+const value = unwrapOr(result, () => {
+  console.log("Using default");
+  return 42;
+});
+// value: 42
+```
+</CodeGroup>
+
+## Transforming results
+
+### map
+
+Transforms the value inside a success result.
+
+```typescript
+function map<T, E, U>(
+  result: Result<T, E>,
+  fn: (value: T) => U,
+): Result<U, E>
+```
+
+```typescript
+import { map, ok, err } from "@temelj/result";
+
+const result = ok(42);
+const doubled = map(result, (n) => n * 2);
+// Result: ok(84)
+
+const errorResult = err("Failed");
+const stillError = map(errorResult, (n) => n * 2);
+// Result: err("Failed") - error unchanged
+```
+
+### mapErr
+
+Transforms the error inside an error result.
+
+```typescript
+function mapErr<E, F>(
+  result: Result<any, E>,
+  fn: (error: E) => F,
+): Result<any, F>
+```
+
+```typescript
+import { mapErr, err, ok } from "@temelj/result";
+
+const result = err("network error");
+const mapped = mapErr(result, (e) => e.toUpperCase());
+// Result: err("NETWORK ERROR")
+
+const okResult = ok(42);
+const stillOk = mapErr(okResult, (e) => e.toUpperCase());
+// Result: ok(42) - value unchanged
+```
+
+## Converting from throwables
+
+### fromThrowable
+
+Calls a synchronous function that may throw and returns a Result.
+
+```typescript
+function fromThrowable<T>(fn: () => T): Result<T, unknown>
+function fromThrowable<T, E>(
+  fn: () => T,
+  onErr: (e: unknown) => E,
+): Result<T, E>
+```
+
+<CodeGroup>
+```typescript Basic usage
+import { fromThrowable } from "@temelj/result";
+
+const result = fromThrowable(() => {
+  return JSON.parse('{"valid": "json"}');
+});
+// Result: ok({ valid: "json" })
+
+const errorResult = fromThrowable(() => {
+  return JSON.parse('invalid json');
+});
+// Result: err(SyntaxError)
+```
+
+```typescript With error mapping
+import { fromThrowable } from "@temelj/result";
+
+const result = fromThrowable(
+  () => JSON.parse('invalid'),
+  (e) => `Parse error: ${(e as Error).message}`
+);
+// Result: err("Parse error: Unexpected token i in JSON at position 0")
+```
+</CodeGroup>
+
+### fromPromise
+
+Calls an async function and returns a `Promise<Result>`. Catches both synchronous exceptions and asynchronous rejections.
+
+```typescript
+function fromPromise<T>(
+  fn: () => Promise<T>,
+): Promise<Result<T, unknown>>
+
+function fromPromise<T, E>(
+  fn: () => Promise<T>,
+  onErr: (e: unknown) => E,
+): Promise<Result<T, E>>
+```
+
+<CodeGroup>
+```typescript Basic async handling
+import { fromPromise, isOk } from "@temelj/result";
+
+const result = await fromPromise(async () => {
+  const response = await fetch("/api/data");
+  return await response.json();
+});
+
+if (isOk(result)) {
+  console.log("Data:", result.value);
+} else {
+  console.error("Failed:", result.error);
+}
+```
+
+```typescript With error mapping
+import { fromPromise } from "@temelj/result";
+
+const result = await fromPromise(
+  async () => {
+    const response = await fetch("/api/data");
+    if (!response.ok) {
+      throw new Error(`HTTP ${response.status}`);
+    }
+    return await response.json();
+  },
+  (e) => ({
+    message: (e as Error).message,
+    timestamp: Date.now(),
+  })
+);
+```
+</CodeGroup>
+
+## Practical examples
+
+### Parsing user input
+
+```typescript
+import { fromThrowable, map, unwrapOr } from "@temelj/result";
+
+function parseAge(input: string): number {
+  const result = fromThrowable(
+    () => {
+      const num = parseInt(input, 10);
+      if (isNaN(num) || num < 0 || num > 150) {
+        throw new Error("Invalid age");
+      }
+      return num;
+    },
+    (e) => (e as Error).message
+  );
+
+  return unwrapOr(result, 0);
+}
+
+console.log(parseAge("25")); // 25
+console.log(parseAge("invalid")); // 0
+console.log(parseAge("200")); // 0
+```
+
+### Chaining operations
+
+```typescript
+import { fromPromise, map, isOk } from "@temelj/result";
+
+async function getUserProfile(userId: string) {
+  const userResult = await fromPromise(
+    async () => await fetchUser(userId),
+    (e) => `Failed to fetch user: ${e}`
+  );
+
+  if (!isOk(userResult)) {
+    return userResult;
+  }
+
+  const profileResult = map(userResult, (user) => ({
+    id: user.id,
+    name: user.name,
+    displayName: `${user.firstName} ${user.lastName}`,
+  }));
+
+  return profileResult;
+}
+```
+
+### Error handling without try-catch
+
+<Tabs>
+  <Tab title="With Result">
+    ```typescript
+    import { fromPromise, isErr } from "@temelj/result";
+
+    async function processData() {
+      const result = await fromPromise(
+        async () => await fetchAndProcessData()
+      );
+
+      if (isErr(result)) {
+        logger.error("Processing failed", result.error);
+        return null;
+      }
+
+      return result.value;
+    }
+    ```
+  </Tab>
+  <Tab title="With try-catch">
+    ```typescript
+    async function processData() {
+      try {
+        return await fetchAndProcessData();
+      } catch (error) {
+        logger.error("Processing failed", error);
+        return null;
+      }
+    }
+    ```
+  </Tab>
+</Tabs>
+
+## Benefits of Result type
+
+<Accordion title="Type safety">
+The Result type forces you to handle errors explicitly at compile time. TypeScript will ensure you check whether a result is Ok or Err before accessing the value.
+</Accordion>
+
+<Accordion title="No hidden control flow">
+Unlike exceptions, Results don't introduce hidden control flow. You can see exactly where errors might occur and how they're handled.
+</Accordion>
+
+<Accordion title="Composable">
+Results can be easily composed using `map`, `mapErr`, and other utilities, making it simple to build complex error handling logic.
+</Accordion>
+
+<Accordion title="Better than union types">
+While you could use union types like `T | Error`, Result provides a structured way to differentiate success and failure with type guards and utilities.
+</Accordion>
+
+## Pattern matching
+
+You can use JavaScript's pattern matching with Results:
+
+```typescript
+import { type Result, ok, err } from "@temelj/result";
+
+function handle(result: Result<number, string>) {
+  switch (result.kind) {
+    case "ok":
+      return `Success: ${result.value}`;
+    case "error":
+      return `Error: ${result.error}`;
+  }
+}
+
+console.log(handle(ok(42))); // "Success: 42"
+console.log(handle(err("failed"))); // "Error: failed"
+```
+
+<Tip>
+The Result type is inspired by Rust's `Result` enum and provides similar ergonomics for error handling in TypeScript.
+</Tip>

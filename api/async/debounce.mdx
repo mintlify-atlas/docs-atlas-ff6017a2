@@ -1,0 +1,126 @@
+---
+title: debounce
+description: Creates a debounced function that delays invoking until after a wait period
+---
+
+Creates a debounced function that delays invoking `fn` until after `waitMs` milliseconds have elapsed since the last time the debounced function was invoked.
+
+## Signature
+
+```typescript
+function debounce<Args extends unknown[], R>(
+  fn: (...args: Args) => PromiseLike<R> | R,
+  waitMs: number,
+  options?: DebounceOptions,
+): (...args: Args) => Promise<R>
+```
+
+## Parameters
+
+<ParamField path="fn" type="(...args: Args) => PromiseLike<R> | R" required>
+  The function to debounce. Can be sync or async.
+</ParamField>
+
+<ParamField path="waitMs" type="number" required>
+  The number of milliseconds to delay.
+</ParamField>
+
+<ParamField path="options" type="DebounceOptions">
+  Debounce configuration options.
+  
+  <Expandable title="properties">
+    <ParamField path="leading" type="boolean" default="false">
+      Fire on the leading edge (immediately on first call).
+    </ParamField>
+    
+    <ParamField path="trailing" type="boolean" default="true">
+      Fire on the trailing edge (after the wait period).
+    </ParamField>
+    
+    <ParamField path="signal" type="AbortSignal">
+      Optional AbortSignal to cancel debouncing.
+    </ParamField>
+  </Expandable>
+</ParamField>
+
+## Returns
+
+<ResponseField type="(...args: Args) => Promise<R>">
+  A debounced version of the function that returns a promise.
+</ResponseField>
+
+## Examples
+
+### Basic debounce
+
+```typescript
+import { debounce } from '@temelj/async';
+
+const search = debounce(async (query: string) => {
+  const results = await api.search(query);
+  return results;
+}, 300);
+
+// Only the last call executes after 300ms
+search('a');
+search('ab');
+search('abc'); // This call executes
+```
+
+### Leading edge execution
+
+```typescript
+import { debounce } from '@temelj/async';
+
+const handleClick = debounce(
+  async () => {
+    await submitForm();
+  },
+  1000,
+  { leading: true, trailing: false }
+);
+
+// Executes immediately on first click, then ignores subsequent clicks for 1s
+handleClick();
+handleClick(); // Ignored
+handleClick(); // Ignored
+```
+
+### With abort signal
+
+```typescript
+import { debounce } from '@temelj/async';
+
+const controller = new AbortController();
+
+const autosave = debounce(
+  async (data: string) => {
+    await saveToServer(data);
+  },
+  500,
+  { signal: controller.signal }
+);
+
+autosave('draft 1');
+autosave('draft 2');
+
+// Cancel pending autosave
+controller.abort();
+```
+
+### Search input debouncing
+
+```typescript
+import { debounce } from '@temelj/async';
+
+const debouncedSearch = debounce(async (query: string) => {
+  if (!query) return [];
+  const response = await fetch(`/api/search?q=${query}`);
+  return await response.json();
+}, 300);
+
+input.addEventListener('input', async (e) => {
+  const results = await debouncedSearch(e.target.value);
+  displayResults(results);
+});
+```

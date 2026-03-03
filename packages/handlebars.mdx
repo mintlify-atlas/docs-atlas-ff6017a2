@@ -1,0 +1,693 @@
+---
+title: "@temelj/handlebars"
+description: "Extended Handlebars helpers and utilities with type-safe helper registration"
+---
+
+# @temelj/handlebars
+
+Handlebars template engine with an extensive collection of built-in helpers and type-safe helper registration using Zod.
+
+## Installation
+
+```bash
+npm install @temelj/handlebars
+```
+
+## Overview
+
+The `@temelj/handlebars` package provides:
+
+- Registry-based Handlebars instance management
+- 40+ built-in helpers for arrays, strings, objects, and values
+- Type-safe helper creation with Zod validation
+- Switch/case statement helpers
+- Partial and template rendering utilities
+
+## Quick start
+
+```typescript
+import { Registry } from "@temelj/handlebars";
+
+const registry = new Registry();
+registry.includeAllHelpers();
+
+const result = registry.render(
+  "Hello {{upperCase name}}!",
+  { name: "world" }
+);
+
+console.log(result); // "Hello WORLD!"
+```
+
+## Registry
+
+The `Registry` class manages a Handlebars instance with helpers and partials:
+
+```typescript
+class Registry {
+  constructor();
+  
+  includeAllHelpers(): Registry;
+  
+  compile(source: string, options?: CompileOptions): TemplateDelegate;
+  
+  render(source: string, data?: unknown, options?: CompileOptions): string;
+  
+  registerHelper(name: string, helper: HelperDelegate): void;
+  
+  registerHelpers(helpers: HelperDeclareSpec): void;
+  
+  registerPartial(name: string, template: Template): void;
+  
+  get partials(): PartialSpec;
+}
+```
+
+### Basic usage
+
+<Tabs>
+  <Tab title="Render">
+    ```typescript
+    import { Registry } from "@temelj/handlebars";
+
+    const registry = new Registry();
+    registry.includeAllHelpers();
+
+    const output = registry.render(
+      "{{name}} is {{age}} years old",
+      { name: "Alice", age: 30 }
+    );
+
+    console.log(output); // "Alice is 30 years old"
+    ```
+  </Tab>
+  <Tab title="Compile">
+    ```typescript
+    import { Registry } from "@temelj/handlebars";
+
+    const registry = new Registry();
+    registry.includeAllHelpers();
+
+    const template = registry.compile("Hello {{name}}!");
+
+    console.log(template({ name: "World" })); // "Hello World!"
+    console.log(template({ name: "Alice" })); // "Hello Alice!"
+    ```
+  </Tab>
+</Tabs>
+
+## Built-in helpers
+
+### String helpers
+
+Transform and manipulate strings:
+
+<CodeGroup>
+
+```handlebars Case conversion
+{{camelCase "hello world"}} {{!-- helloWorld --}}
+{{snakeCase "hello world"}} {{!-- hello_world --}}
+{{pascalCase "hello world"}} {{!-- HelloWorld --}}
+{{titleCase "hello world"}} {{!-- Hello World --}}
+{{kebabCase "hello world"}} {{!-- hello-world --}}
+
+{{capitalize "hello"}} {{!-- Hello --}}
+{{upperCase "hello"}} {{!-- HELLO --}}
+{{lowerCase "HELLO"}} {{!-- hello --}}
+```
+
+```handlebars String splitting
+{{#each (split "a/b/c" "/")}}
+  {{this}}
+{{/each}}
+{{!-- Outputs: a, b, c --}}
+
+{{splitPart "a/b/c" 1}} {{!-- b --}}
+{{splitPartSegment "a/b/c/d" 1 2}} {{!-- b/c --}}
+```
+
+```handlebars String joining
+{{join "Hello" " " "World"}} {{!-- Hello World --}}
+```
+
+</CodeGroup>
+
+#### String helper API
+
+```typescript
+camelCase(str: string): string
+snakeCase(str: string): string
+pascalCase(str: string): string
+titleCase(str: string): string
+kebabCase(str: string): string
+
+capitalize(str: string): string
+upperCase(str: string): string
+lowerCase(str: string): string
+
+split(str: string, separator?: string): string[]
+splitPart(str: string, index: number, separator?: string): string
+splitPartSegment(str: string, from: number, to: number, separator?: string): string
+
+join(...values: unknown[]): string
+```
+
+### Array helpers
+
+Work with arrays and collections:
+
+<CodeGroup>
+
+```handlebars Array creation
+{{#each (array "a" "b" "c")}}
+  {{this}}
+{{/each}}
+```
+
+```handlebars Array access
+{{arrayItemAt myArray 0}} {{!-- First item --}}
+{{arrayItemAt myArray -1}} {{!-- Last item --}}
+```
+
+```handlebars Array operations
+{{#if (arrayContains tags "featured")}}
+  Featured post!
+{{/if}}
+
+{{arrayJoin tags ", "}} {{!-- tag1, tag2, tag3 --}}
+```
+
+```handlebars Array filtering
+{{#each (arrayFilter users "{{#if active}}true{{/if}}")}}
+  {{name}} is active
+{{/each}}
+```
+
+</CodeGroup>
+
+#### Array helper API
+
+```typescript
+array(...items: unknown[]): unknown[]
+arrayItemAt(array: unknown[], index: number): unknown
+arrayContains(array: unknown[], item: unknown): boolean
+arrayJoin(array: unknown[], separator: string): string
+arrayFilter(array: unknown[], predicate: string): unknown[]
+```
+
+<Note>
+`arrayFilter` takes a Handlebars template string as the predicate. The template is compiled and applied to each item.
+</Note>
+
+### Value helpers
+
+Comparisons, logic, and value operations:
+
+<CodeGroup>
+
+```handlebars Comparisons
+{{#if (eq status "active")}}
+  Active
+{{/if}}
+
+{{#if (ne count 0)}}
+  Has items
+{{/if}}
+
+{{#if (gt age 18)}}
+  Adult
+{{/if}}
+
+{{#if (lte score 100)}}
+  Valid score
+{{/if}}
+```
+
+```handlebars Logic
+{{#if (and isActive hasPermission)}}
+  Allowed
+{{/if}}
+
+{{#if (or isAdmin isModerator)}}
+  Has privileges
+{{/if}}
+
+{{#if (not isHidden)}}
+  Visible
+{{/if}}
+```
+
+```handlebars Default values
+{{orElse username "Guest"}} {{!-- Use "Guest" if username is falsy --}}
+```
+
+```handlebars JSON serialization
+{{json data}} {{!-- Compact JSON --}}
+{{json data true}} {{!-- Pretty JSON --}}
+```
+
+```handlebars Empty checks
+{{#if (isEmpty list)}}
+  No items
+{{/if}}
+```
+
+```handlebars JavaScript values
+{{jsValue data}} {{!-- Renders as JavaScript literal --}}
+```
+
+</CodeGroup>
+
+#### Value helper API
+
+```typescript
+eq(a: PrimitiveValue, b: PrimitiveValue): boolean
+ne(a: PrimitiveValue, b: PrimitiveValue): boolean
+lt(a: number, b: number): boolean
+gt(a: number, b: number): boolean
+lte(a: number, b: number): boolean
+gte(a: number, b: number): boolean
+
+and(...args: unknown[]): boolean
+or(...args: unknown[]): boolean
+not(value: boolean | number): boolean
+
+orElse(value: unknown, defaultValue: unknown): unknown
+
+json(value: unknown, pretty?: boolean): string
+
+isEmpty(obj: unknown): boolean
+
+jsValue(value: unknown): SafeString
+```
+
+### Object helpers
+
+Create and manipulate objects:
+
+<CodeGroup>
+
+```handlebars Create objects
+{{#with (object name="Alice" age=30 active=true)}}
+  {{name}} - {{age}} - {{active}}
+{{/with}}
+```
+
+```handlebars Pick properties
+{{#with (objectPick user "name" "email")}}
+  {{name}}: {{email}}
+{{/with}}
+```
+
+</CodeGroup>
+
+#### Object helper API
+
+```typescript
+object(**hash: Record<string, unknown>): Record<string, unknown>
+objectPick(obj: unknown, ...keys: string[]): Record<string, unknown>
+```
+
+### Core helpers
+
+Template composition and variable management:
+
+<CodeGroup>
+
+```handlebars Set variables
+{{set myVar="value" count=42}}
+{{@myVar}} {{!-- value --}}
+{{@count}} {{!-- 42 --}}
+```
+
+```handlebars Set root variables
+{{setRoot globalVar="available everywhere"}}
+{{@root.globalVar}}
+```
+
+```handlebars Render partials
+{{partial "header" title="My Page"}}
+```
+
+```handlebars Inline rendering
+{{render "Hello {{name}}!" name="World"}}
+```
+
+</CodeGroup>
+
+#### Core helper API
+
+```typescript
+set(**hash: Record<string, unknown>): void
+setRoot(**hash: Record<string, unknown>): void
+partial(path: string, **hash: unknown): string
+render(template: string, **hash: unknown): string
+```
+
+<Tip>
+Use `set` and `setRoot` to create reusable variables within templates.
+</Tip>
+
+### Switch/case helpers
+
+Implement switch-case logic in templates:
+
+```handlebars
+{{#switch type}}
+  {{#case "article"}}
+    <article>{{content}}</article>
+  {{/case}}
+  {{#case "video"}}
+    <video src="{{url}}"></video>
+  {{/case}}
+  {{#default}}
+    <div>{{content}}</div>
+  {{/default}}
+{{/switch}}
+```
+
+#### Multiple cases
+
+```handlebars
+{{#switch status}}
+  {{#case "draft" "pending"}}
+    Not published
+  {{/case}}
+  {{#case "published"}}
+    Live
+  {{/case}}
+  {{#default}}
+    Unknown status
+  {{/default}}
+{{/switch}}
+```
+
+## Custom helpers
+
+### Simple helpers
+
+Register custom helpers directly:
+
+```typescript
+import { Registry } from "@temelj/handlebars";
+
+const registry = new Registry();
+
+registry.registerHelper("shout", (text: string) => {
+  return text.toUpperCase() + "!!!";
+});
+
+const result = registry.render(
+  "{{shout message}}",
+  { message: "hello" }
+);
+
+console.log(result); // "HELLO!!!"
+```
+
+### Type-safe helpers with Zod
+
+Create helpers with input validation:
+
+```typescript
+import { Registry, createHelperZod } from "@temelj/handlebars";
+import { z } from "zod";
+
+const registry = new Registry();
+
+// Helper with validated parameters
+registry.registerHelper(
+  "formatCurrency",
+  createHelperZod()
+    .params(z.number(), z.string().optional().default("USD"))
+    .handle(([amount, currency]) => {
+      return new Intl.NumberFormat("en-US", {
+        style: "currency",
+        currency,
+      }).format(amount);
+    })
+);
+
+const result = registry.render(
+  "{{formatCurrency price 'EUR'}}",
+  { price: 42.5 }
+);
+
+console.log(result); // "€42.50"
+```
+
+<Warning>
+If parameters don't match the Zod schema, a `ZodError` will be thrown with detailed validation errors.
+</Warning>
+
+### Helpers with hash arguments
+
+```typescript
+import { Registry, createHelperZod } from "@temelj/handlebars";
+import { z } from "zod";
+
+const registry = new Registry();
+
+registry.registerHelper(
+  "link",
+  createHelperZod()
+    .hash(z.object({
+      href: z.string(),
+      text: z.string(),
+      target: z.string().optional(),
+    }))
+    .handle((hash) => {
+      const target = hash.target ? ` target="${hash.target}"` : "";
+      return `<a href="${hash.href}"${target}>${hash.text}</a>`;
+    })
+);
+
+const result = registry.render(
+  `{{link href="https://example.com" text="Visit" target="_blank"}}`
+);
+
+console.log(result);
+// '<a href="https://example.com" target="_blank">Visit</a>'
+```
+
+### Helpers with params and hash
+
+```typescript
+import { Registry, createHelperZod } from "@temelj/handlebars";
+import { z } from "zod";
+
+const registry = new Registry();
+
+registry.registerHelper(
+  "repeat",
+  createHelperZod()
+    .params(z.string())
+    .hash(z.object({
+      times: z.number().default(1),
+      separator: z.string().default(""),
+    }))
+    .handle(([text], hash) => {
+      return Array(hash.times).fill(text).join(hash.separator);
+    })
+);
+
+const result = registry.render(
+  `{{repeat "Hello" times=3 separator=", "}}`
+);
+
+console.log(result); // "Hello, Hello, Hello"
+```
+
+## Partials
+
+Register and use template partials:
+
+```typescript
+import { Registry } from "@temelj/handlebars";
+
+const registry = new Registry();
+registry.includeAllHelpers();
+
+// Register partial
+registry.registerPartial("header", `
+  <header>
+    <h1>{{title}}</h1>
+    <p>{{subtitle}}</p>
+  </header>
+`);
+
+// Use partial
+const result = registry.render(`
+  {{> header}}
+  <main>Content here</main>
+`, {
+  title: "My Site",
+  subtitle: "Welcome!"
+});
+```
+
+### Dynamic partials with helper
+
+```typescript
+const registry = new Registry();
+registry.includeAllHelpers();
+
+registry.registerPartial("user-card", `
+  <div class="card">
+    <h3>{{name}}</h3>
+    <p>{{email}}</p>
+  </div>
+`);
+
+const result = registry.render(`
+  {{partial "user-card" name="Alice" email="alice@example.com"}}
+`);
+```
+
+## Complete example
+
+A comprehensive example showing multiple features:
+
+```typescript
+import { Registry, createHelperZod } from "@temelj/handlebars";
+import { z } from "zod";
+
+// Create registry with all helpers
+const registry = new Registry();
+registry.includeAllHelpers();
+
+// Register custom helper
+registry.registerHelper(
+  "badge",
+  createHelperZod()
+    .params(z.string())
+    .hash(z.object({
+      color: z.enum(["red", "green", "blue"]).default("blue"),
+    }))
+    .handle(([text], hash) => {
+      return `<span class="badge badge-${hash.color}">${text}</span>`;
+    })
+);
+
+// Register partial
+registry.registerPartial("product-card", `
+  <div class="product">
+    <h3>{{titleCase name}}</h3>
+    <p class="price">{{formatCurrency price}}</p>
+    {{#if inStock}}
+      {{badge "In Stock" color="green"}}
+    {{else}}
+      {{badge "Out of Stock" color="red"}}
+    {{/if}}
+    <div class="tags">
+      {{arrayJoin tags ", "}}
+    </div>
+  </div>
+`);
+
+// Register currency helper
+registry.registerHelper(
+  "formatCurrency",
+  createHelperZod()
+    .params(z.number())
+    .handle(([amount]) => {
+      return `$${amount.toFixed(2)}`;
+    })
+);
+
+// Render template
+const template = `
+  <h1>{{upperCase title}}</h1>
+  
+  {{#each products}}
+    {{> product-card}}
+  {{/each}}
+  
+  {{#if (isEmpty products)}}
+    <p>No products available</p>
+  {{/if}}
+`;
+
+const result = registry.render(template, {
+  title: "Our Products",
+  products: [
+    {
+      name: "laptop computer",
+      price: 999.99,
+      inStock: true,
+      tags: ["electronics", "computers"],
+    },
+    {
+      name: "wireless mouse",
+      price: 29.99,
+      inStock: false,
+      tags: ["electronics", "accessories"],
+    },
+  ],
+});
+
+console.log(result);
+```
+
+## Type exports
+
+```typescript
+export class Registry {
+  constructor();
+  includeAllHelpers(): Registry;
+  compile(source: string, options?: CompileOptions): TemplateDelegate;
+  render(source: string, data?: unknown, options?: CompileOptions): string;
+  registerHelper(name: string, helper: HelperDelegate): void;
+  registerHelpers(helpers: HelperDeclareSpec): void;
+  registerPartial(name: string, template: Template): void;
+  get partials(): PartialSpec;
+}
+
+export function createHelperZod(): HelperZodBuilder;
+
+export class SafeString extends hbs.SafeString {}
+
+export type HelperDelegate = (...args: any[]) => any;
+export type HelperDeclareSpec = Record<string, HelperDelegate>;
+export type Template = string | TemplateDelegate;
+export type PartialSpec = Record<string, TemplateDelegate>;
+
+export interface CompileOptions {
+  data?: boolean;
+  compat?: boolean;
+  knownHelpers?: KnownHelpers;
+  knownHelpersOnly?: boolean;
+  noEscape?: boolean;
+  strict?: boolean;
+  assumeObjects?: boolean;
+  preventIndent?: boolean;
+  ignoreStandalone?: boolean;
+  explicitPartialContext?: boolean;
+}
+```
+
+## Helper builder API
+
+```typescript
+interface HelperZodBuilder {
+  params<TParams>(
+    ...schemas: TParams
+  ): HelperZodBuilderWithParams<TParams>;
+  
+  hash<THash extends z.ZodSchema>(
+    schema: THash
+  ): HelperZodBuilderWithHash<THash>;
+  
+  handle(
+    handler: (context: HelperContext) => HelperResult
+  ): HelperDelegate;
+}
+```
+
+<Accordion title="Why use createHelperZod?">
+  The Zod helper builder provides runtime type validation, automatic error messages, and TypeScript type inference for helper parameters. This makes helpers safer and easier to debug.
+</Accordion>
+
+<Accordion title="Performance considerations">
+  Helpers created with `createHelperZod` have minimal runtime overhead. Zod schemas are validated once per helper invocation, and the validation is fast for simple types.
+</Accordion>

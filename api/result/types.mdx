@@ -1,0 +1,92 @@
+---
+title: Result types
+description: Type definitions for the Result monad
+---
+
+## Result\<T, E\>
+
+A result monad that can either be a success or an error.
+
+<ParamField path="T" type="type parameter">
+  The type of the success value
+</ParamField>
+
+<ParamField path="E" type="type parameter">
+  The type of the error value
+</ParamField>
+
+<ResponseField name="Result<T, E>" type="ResultOk<T> | ResultErr<E>">
+  A discriminated union type that is either a success or an error
+</ResponseField>
+
+### Example
+
+```typescript
+import { type Result, ok, err } from "@temelj/result";
+
+function divide(a: number, b: number): Result<number, string> {
+  if (b === 0) {
+    return err("Division by zero");
+  }
+  return ok(a / b);
+}
+
+const result = divide(10, 2);
+if (result.kind === "ok") {
+  console.log(result.value); // 5
+}
+```
+
+## ResultOk\<T\>
+
+A result value that is a success.
+
+<ParamField path="T" type="type parameter">
+  The type of the success value
+</ParamField>
+
+<ResponseField name="kind" type="'ok'" required>
+  Discriminant property that identifies this as a success result
+</ResponseField>
+
+<ResponseField name="value" type="T" required>
+  The success value
+</ResponseField>
+
+### Example
+
+```typescript
+import { type ResultOk } from "@temelj/result";
+
+const success: ResultOk<number> = {
+  kind: "ok",
+  value: 42,
+};
+```
+
+## ResultErr\<E\>
+
+A result value that is an error.
+
+<ParamField path="E" type="type parameter">
+  The type of the error value
+</ParamField>
+
+<ResponseField name="kind" type="'error'" required>
+  Discriminant property that identifies this as an error result
+</ResponseField>
+
+<ResponseField name="error" type="E" required>
+  The error value
+</ResponseField>
+
+### Example
+
+```typescript
+import { type ResultErr } from "@temelj/result";
+
+const error: ResultErr<string> = {
+  kind: "error",
+  error: "Something went wrong",
+};
+```

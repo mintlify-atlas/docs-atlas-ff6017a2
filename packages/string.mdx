@@ -1,0 +1,299 @@
+---
+title: "@temelj/string"
+description: "String manipulation utilities with comprehensive case conversion functions"
+---
+
+A collection of string manipulation utilities focused on case conversions and string splitting operations.
+
+## Installation
+
+```bash
+npm install @temelj/string
+```
+
+## Case conversion
+
+Convert strings between different casing conventions with intelligent word boundary detection.
+
+### toCamelCase
+
+Converts a string to camelCase.
+
+```typescript
+function toCamelCase(s: string, options?: ConvertCaseOptions): string
+```
+
+<CodeGroup>
+```typescript Example
+import { toCamelCase } from "@temelj/string";
+
+toCamelCase("Hello World");    // "helloWorld"
+toCamelCase("user_name");      // "userName"
+toCamelCase("get-user-id");    // "getUserId"
+toCamelCase("XMLHttpRequest"); // "xmlHttpRequest"
+```
+
+```typescript With custom split function
+import { toCamelCase } from "@temelj/string";
+
+const result = toCamelCase("hello/world", {
+  split: (s) => s.split("/")
+});
+// "helloWorld"
+```
+</CodeGroup>
+
+### toSnakeCase
+
+Converts a string to snake_case.
+
+```typescript
+function toSnakeCase(s: string, options?: ConvertCaseOptions): string
+```
+
+```typescript
+import { toSnakeCase } from "@temelj/string";
+
+toSnakeCase("Hello World");  // "hello_world"
+toSnakeCase("userName");     // "user_name"
+toSnakeCase("getUserID");    // "get_user_id"
+toSnakeCase("A b");          // "a_b"
+toSnakeCase("Ab42");         // "ab42"
+```
+
+### toPascalCase
+
+Converts a string to PascalCase.
+
+```typescript
+function toPascalCase(s: string, options?: ConvertCaseOptions): string
+```
+
+```typescript
+import { toPascalCase } from "@temelj/string";
+
+toPascalCase("Hello World");   // "HelloWorld"
+toPascalCase("user_name");     // "UserName"
+toPascalCase("data-type-id");  // "DataTypeId"
+toPascalCase("get_User");      // "GetUser"
+```
+
+### toKebabCase
+
+Converts a string to kebab-case.
+
+```typescript
+function toKebabCase(s: string, options?: ConvertCaseOptions): string
+```
+
+```typescript
+import { toKebabCase } from "@temelj/string";
+
+toKebabCase("Hello World");  // "hello-world"
+toKebabCase("userName");     // "user-name"
+toKebabCase("getUserID");    // "get-user-id"
+```
+
+### toTitleCase
+
+Converts a string to Title Case.
+
+```typescript
+function toTitleCase(s: string, options?: ConvertCaseOptions): string
+```
+
+```typescript
+import { toTitleCase } from "@temelj/string";
+
+toTitleCase("hello world");    // "Hello World"
+toTitleCase("user_name");      // "User Name"
+toTitleCase("data-type-id");   // "Data Type Id"
+```
+
+## Utility functions
+
+### capitalize
+
+Capitalizes the first letter of a string.
+
+```typescript
+function capitalize(s: string): string
+```
+
+```typescript
+import { capitalize } from "@temelj/string";
+
+capitalize("hello");    // "Hello"
+capitalize("world");    // "World"
+capitalize("UPPERCASE"); // "Uppercase"
+```
+
+### caseSplit
+
+Splits a string into parts based on case changes and delimiters.
+
+```typescript
+function caseSplit(s: string, options?: ConvertCaseOptions): string[]
+```
+
+<CodeGroup>
+```typescript Basic usage
+import { caseSplit } from "@temelj/string";
+
+caseSplit("HelloWorld");        // ["hello", "world"]
+caseSplit("user_name");         // ["user", "name"]
+caseSplit("get-user-id");       // ["get", "user", "id"]
+caseSplit("XMLHttpRequest");    // ["xml", "http", "request"]
+```
+
+```typescript Custom split function
+import { caseSplit } from "@temelj/string";
+
+const parts = caseSplit("hello|world|test", {
+  split: (s) => s.split("|")
+});
+// ["hello", "world", "test"]
+```
+</CodeGroup>
+
+<Note>
+  The `caseSplit` function recognizes multiple delimiters including spaces, dots, underscores, and hyphens, as well as case changes.
+</Note>
+
+## Types
+
+### ConvertCaseOptions
+
+Options for customizing case conversion behavior.
+
+```typescript
+interface ConvertCaseOptions {
+  /**
+   * A function to split a string into parts.
+   */
+  split?: (s: string) => string[];
+}
+```
+
+## Conversion behavior
+
+All case conversion functions handle the following automatically:
+
+<Accordion title="Recognized delimiters">
+  - Spaces (` `)
+  - Dots (`.`)
+  - Underscores (`_`)
+  - Hyphens (`-`)
+  - Case changes (e.g., `camelCase` or `PascalCase`)
+</Accordion>
+
+<Accordion title="Number handling">
+  Numbers are preserved as part of words:
+  
+  ```typescript
+  toCamelCase("user123Name");  // "user123Name"
+  toSnakeCase("get42Items");   // "get42_items"
+  ```
+</Accordion>
+
+<Accordion title="Empty string handling">
+  All functions return an empty string when given an empty string:
+  
+  ```typescript
+  toCamelCase("");   // ""
+  toSnakeCase("");   // ""
+  toPascalCase("");  // ""
+  ```
+</Accordion>
+
+## Examples
+
+<Tabs>
+  <Tab title="API field conversion">
+    ```typescript
+    import { toCamelCase, toSnakeCase } from "@temelj/string";
+
+    // Convert API response from snake_case to camelCase
+    function convertApiResponse(data: Record<string, any>) {
+      const result: Record<string, any> = {};
+      for (const [key, value] of Object.entries(data)) {
+        result[toCamelCase(key)] = value;
+      }
+      return result;
+    }
+
+    const apiData = {
+      user_name: "john",
+      user_email: "john@example.com",
+      created_at: "2024-01-01"
+    };
+
+    convertApiResponse(apiData);
+    // {
+    //   userName: "john",
+    //   userEmail: "john@example.com",
+    //   createdAt: "2024-01-01"
+    // }
+    ```
+  </Tab>
+
+  <Tab title="CSS class generation">
+    ```typescript
+    import { toKebabCase } from "@temelj/string";
+
+    function generateClassName(componentName: string, modifier?: string) {
+      const base = toKebabCase(componentName);
+      if (modifier) {
+        return `${base}--${toKebabCase(modifier)}`;
+      }
+      return base;
+    }
+
+    generateClassName("UserProfile");
+    // "user-profile"
+
+    generateClassName("UserProfile", "IsActive");
+    // "user-profile--is-active"
+    ```
+  </Tab>
+
+  <Tab title="Database naming">
+    ```typescript
+    import { toSnakeCase, toPascalCase } from "@temelj/string";
+
+    // Convert TypeScript class names to database table names
+    function toTableName(className: string): string {
+      return toSnakeCase(className);
+    }
+
+    toTableName("UserProfile");      // "user_profile"
+    toTableName("BlogPost");         // "blog_post"
+    toTableName("OrderLineItem");    // "order_line_item"
+    ```
+  </Tab>
+
+  <Tab title="Environment variables">
+    ```typescript
+    import { toSnakeCase } from "@temelj/string";
+
+    function toEnvVarName(key: string): string {
+      return toSnakeCase(key).toUpperCase();
+    }
+
+    toEnvVarName("apiKey");           // "API_KEY"
+    toEnvVarName("databaseUrl");      // "DATABASE_URL"
+    toEnvVarName("maxConnections");   // "MAX_CONNECTIONS"
+    ```
+  </Tab>
+</Tabs>
+
+<Warning>
+  Case conversions are lossy operations. Converting back and forth may not preserve the original formatting:
+  
+  ```typescript
+  const original = "XMLHttpRequest";
+  const snake = toSnakeCase(original);    // "xml_http_request"
+  const camel = toCamelCase(snake);       // "xmlHttpRequest"
+  // original !== camel
+  ```
+</Warning>

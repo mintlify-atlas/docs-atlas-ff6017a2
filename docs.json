@@ -1,122 +1,134 @@
 {
   "$schema": "https://mintlify.com/docs.json",
-  "theme": "mint",
-  "name": "Mint Starter Kit",
+  "name": "Temelj",
+  "theme": "palm",
   "colors": {
-    "primary": "#16A34A",
-    "light": "#07C983",
-    "dark": "#15803D"
+    "primary": "#3B82F6",
+    "light": "#60A5FA",
+    "dark": "#2563EB"
   },
-  "favicon": "/favicon.svg",
+  "navbar": {
+    "primary": {
+      "type": "github",
+      "href": "https://github.com/tinrab/temelj"
+    }
+  },
+  "footer": {
+    "socials": {
+      "github": "https://github.com/tinrab/temelj"
+    }
+  },
   "navigation": {
     "tabs": [
       {
-        "tab": "Guides",
+        "tab": "Documentation",
         "groups": [
           {
-            "group": "Getting started",
+            "group": "Getting Started",
             "pages": [
-              "index",
-              "quickstart",
-              "development"
+              "introduction",
+              "installation",
+              "quickstart"
             ]
           },
           {
-            "group": "Customization",
+            "group": "Core Packages",
             "pages": [
-              "essentials/settings",
-              "essentials/navigation"
+              "packages/async",
+              "packages/result",
+              "packages/iterator",
+              "packages/value"
             ]
           },
           {
-            "group": "Writing content",
+            "group": "Data & Utilities",
             "pages": [
-              "essentials/markdown",
-              "essentials/code",
-              "essentials/images",
-              "essentials/reusable-snippets"
+              "packages/math",
+              "packages/string",
+              "packages/id",
+              "packages/color"
             ]
           },
           {
-            "group": "AI tools",
+            "group": "Web & Templating",
             "pages": [
-              "ai-tools/cursor",
-              "ai-tools/claude-code",
-              "ai-tools/windsurf"
+              "packages/request",
+              "packages/mdx",
+              "packages/mdx-react",
+              "packages/handlebars"
+            ]
+          },
+          {
+            "group": "Guides",
+            "pages": [
+              "guides/usage-patterns",
+              "guides/typescript-integration",
+              "guides/bundling"
             ]
           }
         ]
       },
       {
-        "tab": "API reference",
+        "tab": "API Reference",
         "groups": [
           {
-            "group": "API documentation",
+            "group": "Async",
             "pages": [
-              "api-reference/introduction"
+              "api/async/retry",
+              "api/async/debounce",
+              "api/async/throttle",
+              "api/async/mutex",
+              "api/async/queue",
+              "api/async/stream"
             ]
           },
           {
-            "group": "Endpoint examples",
+            "group": "Result",
             "pages": [
-              "api-reference/endpoint/get",
-              "api-reference/endpoint/create",
-              "api-reference/endpoint/delete",
-              "api-reference/endpoint/webhook"
+              "api/result/types",
+              "api/result/operations"
+            ]
+          },
+          {
+            "group": "Iterator",
+            "pages": [
+              "api/iterator/combinatorics",
+              "api/iterator/filter",
+              "api/iterator/range",
+              "api/iterator/search"
+            ]
+          },
+          {
+            "group": "Color",
+            "pages": [
+              "api/color/rgb",
+              "api/color/hsl",
+              "api/color/lab",
+              "api/color/oklch",
+              "api/color/manipulation"
+            ]
+          },
+          {
+            "group": "Math",
+            "pages": [
+              "api/math/vector2",
+              "api/math/rectangle",
+              "api/math/operations"
+            ]
+          },
+          {
+            "group": "Other Modules",
+            "pages": [
+              "api/string",
+              "api/id",
+              "api/value",
+              "api/request",
+              "api/mdx",
+              "api/handlebars"
             ]
           }
         ]
       }
-    ],
-    "global": {
-      "anchors": [
-        {
-          "anchor": "Documentation",
-          "href": "https://mintlify.com/docs",
-          "icon": "book-open-cover"
-        },
-        {
-          "anchor": "Blog",
-          "href": "https://mintlify.com/blog",
-          "icon": "newspaper"
-        }
-      ]
-    }
-  },
-  "logo": {
-    "light": "/logo/light.svg",
-    "dark": "/logo/dark.svg"
-  },
-  "navbar": {
-    "links": [
-      {
-        "label": "Support",
-        "href": "mailto:hi@mintlify.com"
-      }
-    ],
-    "primary": {
-      "type": "button",
-      "label": "Dashboard",
-      "href": "https://dashboard.mintlify.com"
-    }
-  },
-  "contextual": {
-    "options": [
-     "copy",
-     "view",
-     "chatgpt",
-     "claude",
-     "perplexity",
-     "mcp",
-     "cursor",
-     "vscode"
-   ]
-  },
-  "footer": {
-    "socials": {
-      "x": "https://x.com/mintlify",
-      "github": "https://github.com/mintlify",
-      "linkedin": "https://linkedin.com/company/mintlify"
-    }
+    ]
   }
 }

@@ -1,0 +1,142 @@
+---
+title: Installation
+description: Install Temelj packages using npm, pnpm, or JSR.
+---
+
+# Installation
+
+Temelj packages are available through multiple package registries. Choose your preferred package manager and installation method.
+
+## Package managers
+
+Temelj supports npm, pnpm, and JSR. All packages are published to both npm and JSR registries.
+
+<CardGroup cols={3}>
+  <Card title="npm" icon="npm">
+    Standard npm registry
+  </Card>
+  <Card title="pnpm" icon="box">
+    Fast, disk space efficient
+  </Card>
+  <Card title="JSR" icon="js">
+    Modern JavaScript registry
+  </Card>
+</CardGroup>
+
+## Installation options
+
+You can install Temelj in two ways:
+
+1. **Individual packages** - Install only the packages you need
+2. **Unified package** - Install the main `@tinrab/temelj` package and import from subpaths
+
+### Individual packages
+
+Install specific packages from the `@temelj` namespace:
+
+<CodeGroup>
+
+```bash npm
+npm install @temelj/async
+npm install @temelj/result
+npm install @temelj/string
+```
+
+```bash pnpm
+pnpm add @temelj/async
+pnpm add @temelj/result
+pnpm add @temelj/string
+```
+
+```bash jsr
+npx jsr add @temelj/async
+npx jsr add @temelj/result
+npx jsr add @temelj/string
+```
+
+</CodeGroup>
+
+Then import from each package:
+
+```typescript
+import { retry, delay } from '@temelj/async';
+import { ok, err, Result } from '@temelj/result';
+import { toCamelCase } from '@temelj/string';
+```
+
+### Unified package
+
+Install the main package and import from subpaths:
+
+<CodeGroup>
+
+```bash npm
+npm install @tinrab/temelj
+```
+
+```bash pnpm
+pnpm add @tinrab/temelj
+```
+
+```bash jsr
+npx jsr add @tinrab/temelj
+```
+
+</CodeGroup>
+
+Then import from subpaths:
+
+```typescript
+import { retry, delay } from '@tinrab/temelj/async';
+import { ok, err, Result } from '@tinrab/temelj/result';
+import { toCamelCase } from '@tinrab/temelj/string';
+```
+
+## Available packages
+
+Here's the complete list of available packages:
+
+| Package | npm | JSR |
+|---------|-----|-----|
+| async | `@temelj/async` | `@temelj/async` |
+| color | `@temelj/color` | `@temelj/color` |
+| handlebars | `@temelj/handlebars` | `@temelj/handlebars` |
+| id | `@temelj/id` | `@temelj/id` |
+| iterator | `@temelj/iterator` | `@temelj/iterator` |
+| math | `@temelj/math` | `@temelj/math` |
+| mdx | `@temelj/mdx` | `@temelj/mdx` |
+| mdx-react | `@temelj/mdx-react` | `@temelj/mdx-react` |
+| request | `@temelj/request` | `@temelj/request` |
+| result | `@temelj/result` | `@temelj/result` |
+| string | `@temelj/string` | `@temelj/string` |
+| value | `@temelj/value` | `@temelj/value` |
+
+<Note>
+  All packages are tree-shakeable and have minimal dependencies. Most packages are zero-dependency.
+</Note>
+
+## TypeScript configuration
+
+Temelj requires TypeScript 5.0 or higher. Ensure your `tsconfig.json` has appropriate settings:
+
+```json tsconfig.json
+{
+  "compilerOptions": {
+    "target": "ES2020",
+    "module": "ESNext",
+    "moduleResolution": "bundler",
+    "strict": true
+  }
+}
+```
+
+## Next steps
+
+<CardGroup cols={2}>
+  <Card title="Quick start" icon="rocket" href="/quickstart">
+    Get started with your first Temelj utilities
+  </Card>
+  <Card title="Package guides" icon="book" href="/packages">
+    Explore detailed documentation for each package
+  </Card>
+</CardGroup>

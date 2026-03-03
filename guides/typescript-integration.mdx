@@ -1,0 +1,514 @@
+---
+title: TypeScript integration
+description: Configure TypeScript for optimal type safety and developer experience with Temelj packages
+---
+
+Temelj is built with TypeScript and provides comprehensive type definitions for all packages. This guide covers TypeScript configuration and advanced type patterns.
+
+## TypeScript configuration
+
+Temelj packages are published as ES modules with full TypeScript support. Configure your project for the best experience.
+
+### Recommended tsconfig.json
+
+```json tsconfig.json
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "module": "ESNext",
+    "lib": ["ES2022"],
+    "moduleResolution": "bundler",
+    
+    // Enable strict type checking
+    "strict": true,
+    "noUncheckedIndexedAccess": true,
+    "exactOptionalPropertyTypes": true,
+    
+    // Import/export settings
+    "esModuleInterop": true,
+    "allowSyntheticDefaultImports": true,
+    "resolveJsonModule": true,
+    "isolatedModules": true,
+    
+    // Type checking enhancements
+    "skipLibCheck": false,
+    "forceConsistentCasingInFileNames": true,
+    
+    // Output settings
+    "declaration": true,
+    "declarationMap": true,
+    "sourceMap": true,
+    "outDir": "./dist"
+  },
+  "include": ["src/**/*"],
+  "exclude": ["node_modules", "dist"]
+}
+```
+
+<Note>
+Temelj uses `"type": "module"` in package.json and exports `.mjs` files with `.d.mts` type definitions. Your moduleResolution should be set to `"bundler"` or `"node16"`/`"nodenext"`.
+</Note>
+
+### Module resolution
+
+Temelj packages follow modern ES module standards.
+
+<CodeGroup>
+```typescript Import from scoped packages
+// Individual package imports
+import { ok, err, type Result } from '@temelj/result';
+import { retry, debounce } from '@temelj/async';
+import { toCamelCase } from '@temelj/string';
+import { isPrimitiveValue } from '@temelj/value';
+```
+
+```typescript Import from monorepo package
+// Alternative: single dependency (if using @tinrab/temelj)
+import { ok, err, type Result } from '@tinrab/temelj/result';
+import { retry, debounce } from '@tinrab/temelj/async';
+import { toCamelCase } from '@tinrab/temelj/string';
+```
+</CodeGroup>
+
+## Type-safe Result patterns
+
+The `@temelj/result` package provides powerful type inference for error handling.
+
+### Discriminated unions
+
+Result types are discriminated unions that TypeScript can narrow automatically.
+
+```typescript Type narrowing
+import { ok, err, isOk, isErr, type Result } from '@temelj/result';
+
+type ValidationError = 
+  | { type: 'missing_field'; field: string }
+  | { type: 'invalid_format'; field: string; expected: string };
+
+function validateEmail(email: string): Result<string, ValidationError> {
+  if (!email) {
+    return err({ type: 'missing_field', field: 'email' });
+  }
+  
+  if (!email.includes('@')) {
+    return err({ 
+      type: 'invalid_format', 
+      field: 'email',
+      expected: 'user@domain.com' 
+    });
+  }
+  
+  return ok(email.toLowerCase());
+}
+
+// TypeScript automatically narrows the type
+const result = validateEmail('test@example.com');
+
+if (isOk(result)) {
+  // result.value is string
+  console.log(result.value.toUpperCase());
+} else {
+  // result.error is ValidationError
+  if (result.error.type === 'missing_field') {
+    console.error(`Field required: ${result.error.field}`);
+  } else {
+    console.error(`Invalid format for ${result.error.field}`);
+  }
+}
+```
+
+### Generic error types
+
+Create reusable error handling utilities with generics.
+
+```typescript Generic Result helpers
+import { type Result, isOk, unwrapOr, map } from '@temelj/result';
+
+// Extract success values from an array of Results
+function collectOk<T, E>(results: Result<T, E>[]): T[] {
+  return results
+    .filter(isOk)
+    .map(result => result.value);
+}
+
+// Transform successful Results while preserving errors
+function mapResults<T, U, E>(
+  results: Result<T, E>[],
+  fn: (value: T) => U
+): Result<U, E>[] {
+  return results.map(result => map(result, fn));
+}
+
+// Combine multiple Results into a single Result
+function combineResults<T, E>(
+  results: Result<T, E>[]
+): Result<T[], E[]> {
+  const values: T[] = [];
+  const errors: E[] = [];
+
+  for (const result of results) {
+    if (isOk(result)) {
+      values.push(result.value);
+    } else {
+      errors.push(result.error);
+    }
+  }
+
+  if (errors.length > 0) {
+    return { kind: 'error', error: errors };
+  }
+
+  return { kind: 'ok', value: values };
+}
+```
+
+<Tip>
+Use descriptive error types instead of plain strings. This enables exhaustive pattern matching and better error handling.
+</Tip>
+
+## Advanced async typing
+
+Async utilities maintain type safety through complex operations.
+
+### Typed retry with transformations
+
+```typescript Type-safe retry
+import { retry } from '@temelj/async';
+import { fromPromise, map, type Result } from '@temelj/result';
+
+interface ApiResponse<T> {
+  data: T;
+  metadata: {
+    timestamp: number;
+    version: string;
+  };
+}
+
+interface User {
+  id: string;
+  email: string;
+}
+
+async function fetchUser(id: string): Promise<Result<User, string>> {
+  return fromPromise(
+    () => retry(
+      async (attempt): Promise<ApiResponse<User>> => {
+        console.log(`Attempt ${attempt + 1}`);
+        const response = await fetch(`/api/users/${id}`);
+        
+        if (!response.ok) {
+          throw new Error(`HTTP ${response.status}`);
+        }
+        
+        return response.json();
+      },
+      { 
+        times: 3, 
+        delay: (attempt) => Math.min(1000 * Math.pow(2, attempt), 10000)
+      }
+    ),
+    (error) => `Failed to fetch user: ${String(error)}`
+  ).then(result => map(result, response => response.data));
+}
+```
+
+### Async function type inference
+
+TypeScript infers return types from async utilities.
+
+```typescript Inferred types
+import { limit, map, reduce } from '@temelj/async';
+
+const limitedFetch = limit(
+  async (url: string) => {
+    const response = await fetch(url);
+    return response.json();
+  },
+  5
+);
+
+// TypeScript infers: (url: string) => Promise<any>
+
+// With explicit typing
+interface Data {
+  id: number;
+  value: string;
+}
+
+const typedLimitedFetch = limit(
+  async (url: string): Promise<Data> => {
+    const response = await fetch(url);
+    return response.json();
+  },
+  5
+);
+
+// TypeScript infers: (url: string) => Promise<Data>
+```
+
+## Value type checking
+
+Use `@temelj/value` for runtime type checking with compile-time safety.
+
+### Type guards
+
+```typescript Runtime type validation
+import { 
+  isPrimitiveValue, 
+  isValuePrimitive,
+  isObjectPrimitive,
+  type PrimitiveValue,
+  type Primitive 
+} from '@temelj/value';
+
+function serialize(data: unknown): string | null {
+  // Type guard narrows unknown to PrimitiveValue
+  if (isPrimitiveValue(data)) {
+    return JSON.stringify(data);
+  }
+  
+  console.error('Cannot serialize non-primitive value');
+  return null;
+}
+
+// Type-safe primitive checking
+function validatePrimitive<T>(value: T): value is T & Primitive {
+  return isValuePrimitive(value);
+}
+
+const input: unknown = { name: 'test' };
+
+if (isObjectPrimitive(input)) {
+  // input is now typed as PrimitiveObject
+  const keys = Object.keys(input); // ✓ OK
+  input.toString(); // ✓ OK
+}
+```
+
+### Generic constraints
+
+```typescript Constrained generics
+import { type PrimitiveValue } from '@temelj/value';
+
+// Ensure only primitive values can be stored
+class TypedStorage<T extends PrimitiveValue> {
+  private data = new Map<string, T>();
+
+  set(key: string, value: T): void {
+    this.data.set(key, value);
+  }
+
+  get(key: string): T | undefined {
+    return this.data.get(key);
+  }
+
+  serialize(): string {
+    return JSON.stringify(Object.fromEntries(this.data));
+  }
+}
+
+const storage = new TypedStorage<string | number>();
+storage.set('count', 42); // ✓ OK
+storage.set('name', 'test'); // ✓ OK
+
+// TypeScript error: Type 'Function' does not satisfy the constraint 'PrimitiveValue'
+// const badStorage = new TypedStorage<Function>();
+```
+
+## String manipulation types
+
+String utilities preserve type information where possible.
+
+```typescript String type inference
+import { 
+  toCamelCase, 
+  toSnakeCase, 
+  toPascalCase,
+  capitalize 
+} from '@temelj/string';
+
+// Runtime conversion with compile-time keys
+const API_KEYS = ['user_id', 'first_name', 'created_at'] as const;
+
+type ApiKey = typeof API_KEYS[number];
+type ClientKey = string; // After conversion
+
+function convertApiKeys<T extends Record<ApiKey, unknown>>(
+  data: T
+): Record<string, unknown> {
+  const result: Record<string, unknown> = {};
+  
+  for (const [key, value] of Object.entries(data)) {
+    result[toCamelCase(key)] = value;
+  }
+  
+  return result;
+}
+
+const apiData = {
+  user_id: '123',
+  first_name: 'John',
+  created_at: Date.now()
+};
+
+const clientData = convertApiKeys(apiData);
+// { userId: '123', firstName: 'John', createdAt: number }
+```
+
+## Utility type patterns
+
+Create reusable type utilities for your application.
+
+<Accordion title="Helper types for common patterns">
+```typescript Type utilities
+import type { Result } from '@temelj/result';
+import type { PrimitiveValue } from '@temelj/value';
+
+// Extract the success type from a Result
+type UnwrapResult<T> = T extends Result<infer U, any> ? U : never;
+
+// Extract the error type from a Result
+type UnwrapError<T> = T extends Result<any, infer E> ? E : never;
+
+// Create a Result from a function's return type
+type ResultFrom<T extends (...args: any[]) => any> = 
+  ReturnType<T> extends Promise<infer U> 
+    ? Result<U, Error>
+    : Result<ReturnType<T>, Error>;
+
+// Ensure object values are all primitive
+type PrimitiveRecord<K extends string | number | symbol> = Record<K, PrimitiveValue>;
+
+// Usage examples
+type UserResult = Result<{ id: string; name: string }, string>;
+type User = UnwrapResult<UserResult>; // { id: string; name: string }
+type UserError = UnwrapError<UserResult>; // string
+
+async function fetchData() {
+  return { id: 1, data: 'test' };
+}
+
+type FetchResult = ResultFrom<typeof fetchData>;
+// Result<{ id: number; data: string }, Error>
+```
+</Accordion>
+
+## Testing with types
+
+Write type-safe tests using Temelj utilities.
+
+```typescript Type-safe tests
+import { describe, it, expect } from 'vitest';
+import { ok, err, isOk, unwrap } from '@temelj/result';
+import { toCamelCase } from '@temelj/string';
+
+describe('Result type safety', () => {
+  it('maintains type information through transformations', () => {
+    const result = ok(42);
+    
+    // Type assertion with runtime check
+    expect(isOk(result)).toBe(true);
+    
+    if (isOk(result)) {
+      // TypeScript knows result.value is number
+      expect(result.value).toBe(42);
+      expect(typeof result.value).toBe('number');
+    }
+  });
+
+  it('handles errors with specific types', () => {
+    type AppError = { code: number; message: string };
+    
+    const result: Result<string, AppError> = err({ 
+      code: 404, 
+      message: 'Not found' 
+    });
+    
+    expect(isOk(result)).toBe(false);
+    
+    if (!isOk(result)) {
+      // TypeScript knows result.error is AppError
+      expect(result.error.code).toBe(404);
+    }
+  });
+});
+
+describe('String conversion', () => {
+  it('converts case formats', () => {
+    const input = 'user_name' as const;
+    const output = toCamelCase(input);
+    
+    expect(output).toBe('userName');
+    expect(output).toMatch(/^[a-z][a-zA-Z]*$/);
+  });
+});
+```
+
+<Warning>
+Always enable `strict: true` in your tsconfig.json. Temelj types are designed for strict mode and may not catch errors correctly without it.
+</Warning>
+
+## Common type issues
+
+<Steps>
+  <Step title="Module not found errors">
+    Ensure your `moduleResolution` is set to `"bundler"`, `"node16"`, or `"nodenext"`. Temelj uses ES modules.
+    
+    ```json
+    {
+      "compilerOptions": {
+        "moduleResolution": "bundler"
+      }
+    }
+    ```
+  </Step>
+
+  <Step title="Type widening with Result">
+    If TypeScript widens your error types too much, explicitly annotate the Result type:
+    
+    ```typescript
+    // Instead of
+    const result = ok('value'); // Result<string, never>
+    
+    // Use explicit annotation when errors are possible
+    const result: Result<string, Error> = ok('value');
+    ```
+  </Step>
+
+  <Step title="Generic inference failures">
+    Help TypeScript infer types by providing explicit generic parameters:
+    
+    ```typescript
+    import { map } from '@temelj/result';
+    
+    // TypeScript may need help
+    const result = map<string, Error, number>(
+      someResult,
+      (value) => parseInt(value)
+    );
+    ```
+  </Step>
+</Steps>
+
+## Performance considerations
+
+<Note>
+TypeScript's type checking is compile-time only. Temelj's type guards and utilities have minimal runtime overhead while providing maximum type safety.
+</Note>
+
+### Build optimization
+
+```json tsconfig.json (production)
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "module": "ESNext",
+    "declaration": false,
+    "sourceMap": false,
+    "removeComments": true,
+    "skipLibCheck": true
+  }
+}
+```
+
+Skipping declaration generation and sourcemaps in production builds can significantly reduce build time while maintaining runtime performance.

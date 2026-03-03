@@ -1,0 +1,641 @@
+---
+title: Bundling with build tools
+description: Configure bundlers and build tools to optimize Temelj packages for production deployments
+---
+
+Temelj packages are distributed as ES modules optimized for modern bundlers. This guide covers configuration for popular build tools and optimization strategies.
+
+## Package structure
+
+Each Temelj package follows a consistent structure:
+
+```plaintext Package layout
+@temelj/result/
+├── dist/
+│   ├── mod.mjs          # ES module entry point
+│   └── mod.d.mts        # TypeScript declarations
+├── package.json         # Package metadata
+└── README.md
+```
+
+The package.json exports field provides the entry point:
+
+```json Package exports
+{
+  "name": "@temelj/result",
+  "type": "module",
+  "main": "./dist/mod.mjs",
+  "types": "./dist/mod.d.mts",
+  "exports": {
+    ".": {
+      "types": "./dist/mod.d.mts",
+      "import": "./dist/mod.mjs"
+    }
+  }
+}
+```
+
+<Note>
+All Temelj packages use the `.mjs` extension and `"type": "module"` to ensure they're treated as ES modules by all tools.
+</Note>
+
+## Vite
+
+Vite works with Temelj packages out of the box with minimal configuration.
+
+### Basic configuration
+
+```typescript vite.config.ts
+import { defineConfig } from 'vite';
+import { resolve } from 'path';
+
+export default defineConfig({
+  build: {
+    target: 'es2022',
+    minify: 'esbuild',
+    sourcemap: true,
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          // Separate Temelj utilities into their own chunk
+          'temelj-core': [
+            '@temelj/result',
+            '@temelj/value',
+            '@temelj/string'
+          ],
+          'temelj-async': ['@temelj/async']
+        }
+      }
+    }
+  },
+  optimizeDeps: {
+    include: [
+      '@temelj/result',
+      '@temelj/async',
+      '@temelj/value',
+      '@temelj/string'
+    ]
+  }
+});
+```
+
+### Library mode
+
+When building a library that depends on Temelj:
+
+```typescript vite.config.ts (library)
+import { defineConfig } from 'vite';
+import { resolve } from 'path';
+
+export default defineConfig({
+  build: {
+    lib: {
+      entry: resolve(__dirname, 'src/index.ts'),
+      name: 'MyLibrary',
+      formats: ['es'],
+      fileName: 'index'
+    },
+    rollupOptions: {
+      // Externalize Temelj packages
+      external: [
+        '@temelj/result',
+        '@temelj/async',
+        '@temelj/value',
+        '@temelj/string',
+        '@temelj/iterator',
+        '@temelj/math',
+        '@temelj/request',
+        '@temelj/id',
+        '@temelj/color'
+      ]
+    }
+  }
+});
+```
+
+<Tip>
+Externalize Temelj packages in library mode to avoid bundling them twice when consumers install both your library and Temelj.
+</Tip>
+
+## Webpack
+
+Configure Webpack 5 to handle ES modules correctly.
+
+```javascript webpack.config.js
+import path from 'path';
+import { fileURLToPath } from 'url';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
+export default {
+  entry: './src/index.ts',
+  output: {
+    path: path.resolve(__dirname, 'dist'),
+    filename: '[name].[contenthash].js',
+    module: true,
+    chunkFormat: 'module'
+  },
+  experiments: {
+    outputModule: true
+  },
+  module: {
+    rules: [
+      {
+        test: /\.ts$/,
+        use: 'ts-loader',
+        exclude: /node_modules/
+      }
+    ]
+  },
+  resolve: {
+    extensions: ['.ts', '.js', '.mjs'],
+    extensionAlias: {
+      '.js': ['.js', '.ts'],
+      '.mjs': ['.mjs', '.mts']
+    }
+  },
+  optimization: {
+    moduleIds: 'deterministic',
+    runtimeChunk: 'single',
+    splitChunks: {
+      cacheGroups: {
+        temelj: {
+          test: /[\\/]node_modules[\\/]@temelj[\\/]/,
+          name: 'temelj',
+          chunks: 'all',
+          priority: 10
+        },
+        vendor: {
+          test: /[\\/]node_modules[\\/]/,
+          name: 'vendors',
+          chunks: 'all'
+        }
+      }
+    }
+  }
+};
+```
+
+### TypeScript with Webpack
+
+```json tsconfig.json
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "module": "ESNext",
+    "moduleResolution": "bundler",
+    "esModuleInterop": true,
+    "resolveJsonModule": true,
+    "isolatedModules": true,
+    "jsx": "react-jsx"
+  }
+}
+```
+
+## esbuild
+
+Use esbuild for fast builds with Temelj packages.
+
+```javascript build.js
+import * as esbuild from 'esbuild';
+
+await esbuild.build({
+  entryPoints: ['src/index.ts'],
+  bundle: true,
+  outfile: 'dist/bundle.js',
+  format: 'esm',
+  target: 'es2022',
+  platform: 'browser',
+  minify: true,
+  sourcemap: true,
+  splitting: true,
+  outdir: 'dist',
+  outExtension: { '.js': '.mjs' },
+  external: [
+    // Optionally externalize for library builds
+    // '@temelj/*'
+  ],
+  treeShaking: true,
+  metafile: true
+});
+```
+
+<CodeGroup>
+```json package.json scripts
+{
+  "scripts": {
+    "build": "node build.js",
+    "build:watch": "node build.js --watch",
+    "build:analyze": "node build.js --analyze"
+  }
+}
+```
+
+```javascript build.js (with analysis)
+import * as esbuild from 'esbuild';
+import fs from 'fs';
+
+const result = await esbuild.build({
+  entryPoints: ['src/index.ts'],
+  bundle: true,
+  outdir: 'dist',
+  format: 'esm',
+  metafile: true,
+  splitting: true
+});
+
+if (process.argv.includes('--analyze')) {
+  const analysis = await esbuild.analyzeMetafile(result.metafile, {
+    verbose: true
+  });
+  console.log(analysis);
+  fs.writeFileSync('meta.json', JSON.stringify(result.metafile));
+}
+```
+</CodeGroup>
+
+## Rollup
+
+Rollup configuration for Temelj packages.
+
+```javascript rollup.config.js
+import typescript from '@rollup/plugin-typescript';
+import resolve from '@rollup/plugin-node-resolve';
+import commonjs from '@rollup/plugin-commonjs';
+import terser from '@rollup/plugin-terser';
+
+export default {
+  input: 'src/index.ts',
+  output: [
+    {
+      file: 'dist/index.mjs',
+      format: 'es',
+      sourcemap: true
+    },
+    {
+      file: 'dist/index.min.mjs',
+      format: 'es',
+      sourcemap: true,
+      plugins: [terser()]
+    }
+  ],
+  plugins: [
+    resolve({
+      extensions: ['.ts', '.js', '.mjs']
+    }),
+    commonjs(),
+    typescript({
+      tsconfig: './tsconfig.json',
+      declaration: true,
+      declarationDir: 'dist',
+      rootDir: 'src'
+    })
+  ],
+  external: [
+    // For library builds, externalize Temelj
+    /^@temelj\//
+  ]
+};
+```
+
+## Turborepo (monorepo builds)
+
+Temelj itself uses Turbo for its monorepo. Use this configuration as a reference.
+
+```json turbo.json
+{
+  "$schema": "https://turborepo.com/schema.json",
+  "tasks": {
+    "build": {
+      "dependsOn": ["^build"],
+      "inputs": ["$TURBO_DEFAULT$", ".env*"],
+      "outputs": ["dist/**"]
+    },
+    "dev": {
+      "dependsOn": ["^build"],
+      "cache": false,
+      "persistent": true
+    },
+    "typecheck": {
+      "dependsOn": ["^build"]
+    },
+    "test": {
+      "dependsOn": ["^build"],
+      "outputs": ["coverage/**"]
+    }
+  }
+}
+```
+
+<Accordion title="Using tsdown (Temelj's build tool)">
+Temelj packages use [tsdown](https://github.com/sxzz/tsdown) for builds:
+
+```json package.json
+{
+  "scripts": {
+    "build": "tsdown",
+    "clean": "shx rm -rf dist"
+  },
+  "devDependencies": {
+    "tsdown": "^0.20.3",
+    "shx": "^0.4.0"
+  }
+}
+```
+
+tsdown automatically generates optimized `.mjs` and `.d.mts` files from TypeScript source with zero configuration.
+</Accordion>
+
+## Bundle size optimization
+
+Temelj packages are already optimized, but you can further reduce bundle size.
+
+### Tree shaking
+
+All Temelj packages support tree shaking. Import only what you need:
+
+```typescript Optimized imports
+// ✓ Good - only imports what you use
+import { ok, err } from '@temelj/result';
+import { retry } from '@temelj/async';
+
+// ✗ Avoid - imports everything
+import * as Result from '@temelj/result';
+import * as Async from '@temelj/async';
+```
+
+### Code splitting
+
+Split Temelj utilities across chunks for better caching:
+
+<Steps>
+  <Step title="Identify shared utilities">
+    Determine which Temelj packages are used across multiple routes or components.
+  </Step>
+
+  <Step title="Create dedicated chunks">
+    Configure your bundler to separate frequently-used utilities:
+    
+    ```javascript Vite example
+    export default defineConfig({
+      build: {
+        rollupOptions: {
+          output: {
+            manualChunks(id) {
+              if (id.includes('@temelj/result') || id.includes('@temelj/value')) {
+                return 'utils-core';
+              }
+              if (id.includes('@temelj/async')) {
+                return 'utils-async';
+              }
+            }
+          }
+        }
+      }
+    });
+    ```
+  </Step>
+
+  <Step title="Measure impact">
+    Use bundle analysis tools to verify size improvements:
+    
+    ```bash
+    npx vite-bundle-visualizer
+    ```
+  </Step>
+</Steps>
+
+### Dependency analysis
+
+Check what Temelj packages bring in:
+
+```bash Bundle analysis
+# Install analyzer
+npm install -D webpack-bundle-analyzer
+
+# For Webpack
+npx webpack-bundle-analyzer dist/stats.json
+
+# For Vite
+npx vite-bundle-visualizer
+
+# For esbuild (with metafile)
+node -e "console.log(require('./meta.json'))"
+```
+
+<Note>
+Most Temelj packages have zero dependencies. Notable exceptions:
+- `@temelj/value`: uses `deepmerge` and `react-fast-compare`
+- `@temelj/request`: uses `tough-cookie`
+- `@temelj/id`: uses `id128`
+</Note>
+
+## Production optimization
+
+Optimize for production deployments.
+
+### Environment-specific builds
+
+```typescript vite.config.ts
+import { defineConfig } from 'vite';
+
+export default defineConfig(({ mode }) => ({
+  build: {
+    minify: mode === 'production' ? 'esbuild' : false,
+    sourcemap: mode === 'development',
+    target: 'es2022',
+    rollupOptions: {
+      output: {
+        compact: mode === 'production',
+        manualChunks: mode === 'production' ? {
+          temelj: [
+            '@temelj/result',
+            '@temelj/async',
+            '@temelj/value'
+          ]
+        } : undefined
+      }
+    }
+  },
+  define: {
+    __DEV__: JSON.stringify(mode === 'development')
+  }
+}));
+```
+
+### Compression
+
+Enable compression for maximum size reduction:
+
+```javascript vite.config.ts
+import { defineConfig } from 'vite';
+import compression from 'vite-plugin-compression';
+
+export default defineConfig({
+  plugins: [
+    compression({
+      algorithm: 'brotliCompress',
+      ext: '.br',
+      threshold: 1024
+    }),
+    compression({
+      algorithm: 'gzip',
+      ext: '.gz'
+    })
+  ]
+});
+```
+
+## Testing bundled output
+
+Verify your bundle works correctly:
+
+```typescript Bundle test
+import { describe, it, expect } from 'vitest';
+import { ok, isOk } from '@temelj/result';
+
+describe('Bundled utilities', () => {
+  it('imports Result utilities correctly', () => {
+    const result = ok(42);
+    expect(isOk(result)).toBe(true);
+  });
+
+  it('tree-shakes unused exports', async () => {
+    // This test verifies that only imported functions are bundled
+    const module = await import('@temelj/result');
+    expect(module).toHaveProperty('ok');
+    expect(module).toHaveProperty('err');
+  });
+});
+```
+
+## Common bundling issues
+
+<Warning>
+If you encounter "Cannot find module" errors, ensure your bundler is configured to resolve `.mjs` extensions and ES modules correctly.
+</Warning>
+
+### Module resolution errors
+
+<Steps>
+  <Step title="Check package.json type">
+    Ensure your project uses ES modules:
+    
+    ```json
+    {
+      "type": "module"
+    }
+    ```
+  </Step>
+
+  <Step title="Verify bundler configuration">
+    Add `.mjs` to resolved extensions:
+    
+    ```javascript
+    resolve: {
+      extensions: ['.ts', '.tsx', '.js', '.jsx', '.mjs']
+    }
+    ```
+  </Step>
+
+  <Step title="Update TypeScript config">
+    Set proper module resolution:
+    
+    ```json
+    {
+      "compilerOptions": {
+        "moduleResolution": "bundler"
+      }
+    }
+    ```
+  </Step>
+</Steps>
+
+### Dual package hazard
+
+Avoid importing the same package as both ESM and CJS:
+
+```javascript Avoid mixing formats
+// ✗ Don't do this
+import { ok } from '@temelj/result'; // ESM
+const { err } = require('@temelj/result'); // CJS (not supported)
+
+// ✓ Always use ESM imports
+import { ok, err } from '@temelj/result';
+```
+
+## Framework-specific guides
+
+<Accordion title="Next.js configuration">
+```javascript next.config.js
+export default {
+  experimental: {
+    esmExternals: true
+  },
+  transpilePackages: [
+    '@temelj/result',
+    '@temelj/async',
+    '@temelj/value',
+    '@temelj/string'
+  ],
+  webpack: (config) => {
+    config.resolve.extensionAlias = {
+      '.js': ['.js', '.ts'],
+      '.mjs': ['.mjs', '.mts']
+    };
+    return config;
+  }
+};
+```
+</Accordion>
+
+<Accordion title="SvelteKit configuration">
+```javascript vite.config.js
+import { sveltekit } from '@sveltejs/kit/vite';
+import { defineConfig } from 'vite';
+
+export default defineConfig({
+  plugins: [sveltekit()],
+  optimizeDeps: {
+    include: [
+      '@temelj/result',
+      '@temelj/async',
+      '@temelj/value'
+    ]
+  }
+});
+```
+</Accordion>
+
+<Accordion title="Astro configuration">
+```javascript astro.config.mjs
+import { defineConfig } from 'astro/config';
+
+export default defineConfig({
+  vite: {
+    optimizeDeps: {
+      include: ['@temelj/result', '@temelj/async']
+    }
+  }
+});
+```
+</Accordion>
+
+## Performance benchmarks
+
+Typical bundle sizes for common Temelj usage:
+
+```plaintext Bundle sizes (minified + gzipped)
+@temelj/result alone:     ~1.2 KB
+@temelj/async alone:      ~3.5 KB
+@temelj/value alone:      ~2.1 KB
+@temelj/string alone:     ~1.8 KB
+
+All core packages:        ~7.5 KB
+Complete library:        ~15 KB
+```
+
+<Tip>
+These sizes include all exports. With tree shaking, your actual bundle will typically be 40-60% smaller depending on what you import.
+</Tip>

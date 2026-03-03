@@ -1,0 +1,630 @@
+---
+title: Handlebars helpers
+description: Extended Handlebars template engine with built-in helpers for common operations
+---
+
+## Overview
+
+The Handlebars module provides an extended Handlebars template engine with a rich set of built-in helpers for arrays, strings, values, objects, and control flow.
+
+## Registry class
+
+### Constructor
+
+Creates a new Handlebars registry with switch helpers pre-registered.
+
+```typescript
+new Registry()
+```
+
+**Example:**
+
+```typescript
+import { Registry } from "@temelj/handlebars";
+
+const registry = new Registry();
+```
+
+### includeAllHelpers
+
+Registers all built-in helpers (array, string, value, object, and core helpers).
+
+```typescript
+includeAllHelpers(): Registry
+```
+
+<ResponseField name="result" type="Registry">
+  The registry instance for chaining
+</ResponseField>
+
+**Example:**
+
+```typescript
+const registry = new Registry().includeAllHelpers();
+```
+
+### compile
+
+Compiles a Handlebars template.
+
+```typescript
+compile(source: string, options?: CompileOptions): TemplateDelegate
+```
+
+<ParamField path="source" type="string" required>
+  The template source code
+</ParamField>
+
+<ParamField path="options" type="CompileOptions">
+  Handlebars compilation options
+</ParamField>
+
+<ResponseField name="result" type="TemplateDelegate">
+  A compiled template function
+</ResponseField>
+
+**Example:**
+
+```typescript
+const template = registry.compile("Hello {{name}}!");
+const result = template({ name: "World" });
+console.log(result); // "Hello World!"
+```
+
+### render
+
+Compiles and renders a template in one step.
+
+```typescript
+render(source: string, data?: unknown, options?: CompileOptions): string
+```
+
+<ParamField path="source" type="string" required>
+  The template source code
+</ParamField>
+
+<ParamField path="data" type="unknown">
+  The data context for rendering
+</ParamField>
+
+<ParamField path="options" type="CompileOptions">
+  Handlebars compilation options
+</ParamField>
+
+<ResponseField name="result" type="string">
+  The rendered output
+</ResponseField>
+
+**Example:**
+
+```typescript
+const output = registry.render("Hello {{name}}!", { name: "World" });
+console.log(output); // "Hello World!"
+```
+
+### registerHelper
+
+Registers a single custom helper.
+
+```typescript
+registerHelper(name: string, helper: HelperDelegate): void
+```
+
+<ParamField path="name" type="string" required>
+  The helper name
+</ParamField>
+
+<ParamField path="helper" type="HelperDelegate" required>
+  The helper function
+</ParamField>
+
+**Example:**
+
+```typescript
+registry.registerHelper("uppercase", (str: string) => str.toUpperCase());
+
+const output = registry.render("{{uppercase name}}", { name: "hello" });
+console.log(output); // "HELLO"
+```
+
+### registerHelpers
+
+Registers multiple helpers at once.
+
+```typescript
+registerHelpers(helpers: HelperDeclareSpec): void
+```
+
+<ParamField path="helpers" type="HelperDeclareSpec" required>
+  Object mapping helper names to helper functions
+</ParamField>
+
+**Example:**
+
+```typescript
+registry.registerHelpers({
+  uppercase: (str: string) => str.toUpperCase(),
+  lowercase: (str: string) => str.toLowerCase()
+});
+```
+
+### registerPartial
+
+Registers a partial template.
+
+```typescript
+registerPartial(name: string, template: Template): void
+```
+
+<ParamField path="name" type="string" required>
+  The partial name
+</ParamField>
+
+<ParamField path="template" type="Template" required>
+  The partial template source or compiled template
+</ParamField>
+
+**Example:**
+
+```typescript
+registry.registerPartial("header", "<h1>{{title}}</h1>");
+
+const output = registry.render("{{> header}}", { title: "Hello" });
+console.log(output); // "<h1>Hello</h1>"
+```
+
+## Built-in helpers
+
+### Array helpers
+
+#### array
+
+Creates an array from arguments.
+
+```handlebars
+{{array "a" "b" "c"}}
+```
+
+#### arrayItemAt
+
+Gets an item at a specific index.
+
+```handlebars
+{{arrayItemAt items 0}}
+```
+
+#### arrayContains
+
+Checks if an array contains an item.
+
+```handlebars
+{{#if (arrayContains tags "important")}}
+  Important!
+{{/if}}
+```
+
+#### arrayJoin
+
+Joins array elements with a separator.
+
+```handlebars
+{{arrayJoin tags ", "}}
+```
+
+#### arrayFilter
+
+Filters an array using a template predicate.
+
+```handlebars
+{{#each (arrayFilter users "{{#if active}}true{{/if}}")}}
+  {{name}}
+{{/each}}
+```
+
+### String helpers
+
+#### camelCase
+
+Converts to camelCase.
+
+```handlebars
+{{camelCase "hello world"}} {{!-- helloWorld --}}
+```
+
+#### snakeCase
+
+Converts to snake_case.
+
+```handlebars
+{{snakeCase "helloWorld"}} {{!-- hello_world --}}
+```
+
+#### pascalCase
+
+Converts to PascalCase.
+
+```handlebars
+{{pascalCase "hello world"}} {{!-- HelloWorld --}}
+```
+
+#### kebabCase
+
+Converts to kebab-case.
+
+```handlebars
+{{kebabCase "helloWorld"}} {{!-- hello-world --}}
+```
+
+#### titleCase
+
+Converts to Title Case.
+
+```handlebars
+{{titleCase "hello world"}} {{!-- Hello World --}}
+```
+
+#### capitalize
+
+Capitalizes the first letter.
+
+```handlebars
+{{capitalize "hello"}} {{!-- Hello --}}
+```
+
+#### upperCase
+
+Converts to uppercase.
+
+```handlebars
+{{upperCase "hello"}} {{!-- HELLO --}}
+```
+
+#### lowerCase
+
+Converts to lowercase.
+
+```handlebars
+{{lowerCase "HELLO"}} {{!-- hello --}}
+```
+
+#### split
+
+Splits a string by a separator.
+
+```handlebars
+{{split "a/b/c" "/"}} {{!-- ["a", "b", "c"] --}}
+```
+
+#### splitPart
+
+Gets a specific part after splitting.
+
+```handlebars
+{{splitPart "a/b/c" 1 "/"}} {{!-- "b" --}}
+```
+
+#### splitPartSegment
+
+Gets a range of parts after splitting.
+
+```handlebars
+{{splitPartSegment "a/b/c/d" 1 2 "/"}} {{!-- "b/c" --}}
+```
+
+#### join
+
+Joins multiple values into a string.
+
+```handlebars
+{{join "Hello" " " "World"}} {{!-- "Hello World" --}}
+```
+
+### Value helpers
+
+#### eq
+
+Deep equality comparison.
+
+```handlebars
+{{#if (eq value1 value2)}}
+  Equal
+{{/if}}
+```
+
+#### ne
+
+Deep inequality comparison.
+
+```handlebars
+{{#if (ne value1 value2)}}
+  Not equal
+{{/if}}
+```
+
+#### lt / gt / lte / gte
+
+Numeric comparisons.
+
+```handlebars
+{{#if (gt age 18)}}
+  Adult
+{{/if}}
+```
+
+#### and / or / not
+
+Logical operations.
+
+```handlebars
+{{#if (and isActive isVerified)}}
+  Verified and active
+{{/if}}
+
+{{#if (or isAdmin isModerator)}}
+  Has permissions
+{{/if}}
+```
+
+#### orElse
+
+Provides a default value.
+
+```handlebars
+{{orElse name "Anonymous"}}
+```
+
+#### json
+
+Converts to JSON string.
+
+```handlebars
+{{json data}} {{!-- Compact JSON --}}
+{{json data true}} {{!-- Pretty-printed JSON --}}
+```
+
+#### isEmpty
+
+Checks if a value is empty.
+
+```handlebars
+{{#if (isEmpty array)}}
+  No items
+{{/if}}
+```
+
+#### jsValue
+
+Renders a value as JavaScript literal.
+
+```handlebars
+const value = {{{jsValue data}}};
+```
+
+### Object helpers
+
+#### object
+
+Creates an object from hash parameters.
+
+```handlebars
+{{object name="John" age=30}}
+```
+
+#### objectPick
+
+Picks specific keys from an object.
+
+```handlebars
+{{objectPick user "name" "email"}}
+```
+
+### Core helpers
+
+#### set
+
+Sets variables in the data context.
+
+```handlebars
+{{set myVar="value"}}
+{{myVar}}
+```
+
+#### setRoot
+
+Sets variables in the root data context.
+
+```handlebars
+{{setRoot globalVar="value"}}
+{{@root.globalVar}}
+```
+
+#### partial
+
+Renders a partial with hash data.
+
+```handlebars
+{{partial "header" title="Hello"}}
+```
+
+#### render
+
+Renders an inline template.
+
+```handlebars
+{{render "{{uppercase name}}" name="hello"}}
+```
+
+### Switch helpers
+
+Provides switch/case control flow (automatically registered).
+
+```handlebars
+{{#switch status}}
+  {{#case "active"}}
+    Active status
+  {{/case}}
+  {{#case "pending"}}
+    Pending status
+  {{/case}}
+  {{#default}}
+    Unknown status
+  {{/default}}
+{{/switch}}
+```
+
+## Common use cases
+
+### Code generation
+
+```typescript
+import { Registry } from "@temelj/handlebars";
+
+const registry = new Registry().includeAllHelpers();
+
+const template = `
+interface {{pascalCase name}} {
+  {{#each fields}}
+  {{camelCase name}}: {{type}};
+  {{/each}}
+}
+`;
+
+const output = registry.render(template, {
+  name: "user_profile",
+  fields: [
+    { name: "first_name", type: "string" },
+    { name: "last_name", type: "string" },
+    { name: "age", type: "number" }
+  ]
+});
+
+console.log(output);
+// interface UserProfile {
+//   firstName: string;
+//   lastName: string;
+//   age: number;
+// }
+```
+
+### Configuration templates
+
+```typescript
+import { Registry } from "@temelj/handlebars";
+
+const registry = new Registry().includeAllHelpers();
+
+const template = `
+{
+  "name": "{{name}}",
+  "version": "{{version}}",
+  "environment": "{{orElse env \"development\"}}",
+  {{#if (gt (split features \",\").length 0)}}
+  "features": {{{json (split features \",\")}}}
+  {{/if}}
+}
+`;
+
+const config = registry.render(template, {
+  name: "my-app",
+  version: "1.0.0",
+  features: "auth,api,websockets"
+});
+```
+
+### Email templates
+
+```typescript
+import { Registry } from "@temelj/handlebars";
+
+const registry = new Registry().includeAllHelpers();
+
+registry.registerPartial("header", `
+  <header>
+    <h1>{{titleCase title}}</h1>
+  </header>
+`);
+
+registry.registerPartial("footer", `
+  <footer>
+    <p>&copy; {{year}} {{company}}</p>
+  </footer>
+`);
+
+const emailTemplate = `
+<!DOCTYPE html>
+<html>
+  {{> header}}
+  <body>
+    <p>Hello {{capitalize userName}},</p>
+    <p>{{message}}</p>
+    {{#if (isEmpty items)}}
+      <p>No items to display.</p>
+    {{else}}
+      <ul>
+        {{#each items}}
+          <li>{{this}}</li>
+        {{/each}}
+      </ul>
+    {{/if}}
+  </body>
+  {{> footer}}
+</html>
+`;
+
+const html = registry.render(emailTemplate, {
+  title: "welcome email",
+  userName: "john",
+  message: "Welcome to our platform!",
+  items: ["Feature 1", "Feature 2"],
+  year: 2024,
+  company: "My Company"
+});
+```
+
+### API client generation
+
+```typescript
+import { Registry } from "@temelj/handlebars";
+
+const registry = new Registry().includeAllHelpers();
+
+const template = `
+export class {{pascalCase serviceName}}Client {
+  constructor(private baseUrl: string) {}
+
+  {{#each endpoints}}
+  async {{camelCase name}}({{#each params}}{{camelCase name}}: {{type}}{{#unless @last}}, {{/unless}}{{/each}}): Promise<{{returnType}}> {
+    const response = await fetch(\`\${this.baseUrl}{{path}}\`, {
+      method: "{{upperCase method}}",
+      {{#if (eq method "post")}}
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ {{arrayJoin (map params "name") ", "}} })
+      {{/if}}
+    });
+    return response.json();
+  }
+
+  {{/each}}
+}
+`;
+
+const code = registry.render(template, {
+  serviceName: "user_service",
+  endpoints: [
+    {
+      name: "get_user",
+      method: "get",
+      path: "/users/:id",
+      params: [{ name: "id", type: "string" }],
+      returnType: "User"
+    },
+    {
+      name: "create_user",
+      method: "post",
+      path: "/users",
+      params: [{ name: "name", type: "string" }, { name: "email", type: "string" }],
+      returnType: "User"
+    }
+  ]
+});
+```

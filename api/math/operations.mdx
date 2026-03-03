@@ -1,0 +1,120 @@
+---
+title: Math operations
+description: Core mathematical operations and utility functions
+---
+
+## Overview
+
+The math operations module provides fundamental mathematical utilities for constraining numeric values.
+
+## Functions
+
+### clamp
+
+Constrains a value between a minimum and maximum bound.
+
+```typescript
+function clamp<T extends number | bigint>(x: T, min: T, max: T): T
+```
+
+<ParamField path="x" type="number | bigint" required>
+  The value to clamp
+</ParamField>
+
+<ParamField path="min" type="number | bigint" required>
+  The minimum allowed value
+</ParamField>
+
+<ParamField path="max" type="number | bigint" required>
+  The maximum allowed value
+</ParamField>
+
+<ResponseField name="result" type="number | bigint">
+  The clamped value, constrained between min and max
+</ResponseField>
+
+**Example:**
+
+```typescript
+import { clamp } from "@temelj/math";
+
+console.log(clamp(50, 0, 100));   // 50
+console.log(clamp(-10, 0, 100));  // 0
+console.log(clamp(150, 0, 100));  // 100
+
+// Works with bigints too
+console.log(clamp(50n, 0n, 100n)); // 50n
+```
+
+### clampWithOverflow
+
+Clamps a value with wrapping overflow behavior, creating a circular range.
+
+```typescript
+function clampWithOverflow<T extends number | bigint>(x: T, min: T, max: T): T
+```
+
+<ParamField path="x" type="number | bigint" required>
+  The value to clamp
+</ParamField>
+
+<ParamField path="min" type="number | bigint" required>
+  The minimum bound of the range
+</ParamField>
+
+<ParamField path="max" type="number | bigint" required>
+  The maximum bound of the range
+</ParamField>
+
+<ResponseField name="result" type="number | bigint">
+  The value wrapped within the range using modulo arithmetic
+</ResponseField>
+
+**Behavior:**
+
+- If `x < min`, it wraps from the max end: `max - ((min - x) % (max - min))`
+- If `x > max`, it wraps from the min end: `min + ((x - max) % (max - min))`
+- If `x` is within bounds, it returns `x` unchanged
+
+**Example:**
+
+```typescript
+import { clampWithOverflow } from "@temelj/math";
+
+// Value within range
+console.log(clampWithOverflow(50, 0, 100));   // 50
+
+// Value exceeds max, wraps around
+console.log(clampWithOverflow(110, 0, 100));  // 10
+console.log(clampWithOverflow(250, 0, 100));  // 50
+
+// Value below min, wraps around from max
+console.log(clampWithOverflow(-10, 0, 100));  // 90
+console.log(clampWithOverflow(-50, 0, 100));  // 50
+```
+
+**Use cases:**
+
+- Circular angles (0-360 degrees)
+- Array index wrapping
+- Cyclic sequences
+- Game coordinates with world wrapping
+
+**Example - Circular navigation:**
+
+```typescript
+// Navigate through items with wrapping
+function nextIndex(current: number, total: number): number {
+  return clampWithOverflow(current + 1, 0, total);
+}
+
+function previousIndex(current: number, total: number): number {
+  return clampWithOverflow(current - 1, 0, total);
+}
+
+const items = ['A', 'B', 'C'];
+let index = 2;
+
+index = nextIndex(index, items.length);     // 0 (wraps around)
+index = previousIndex(index, items.length); // 2 (wraps backward)
+```

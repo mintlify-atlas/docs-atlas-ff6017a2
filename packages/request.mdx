@@ -1,0 +1,333 @@
+---
+title: "@temelj/request"
+description: "HTTP request utilities for parsing, serializing, and encrypting cookies"
+---
+
+# @temelj/request
+
+HTTP request utilities for working with cookies, including parsing, serialization, and encryption capabilities.
+
+## Installation
+
+```bash
+npm install @temelj/request
+```
+
+## Overview
+
+The `@temelj/request` package provides comprehensive utilities for handling HTTP cookies with support for:
+
+- Cookie parsing and serialization
+- Cookie encryption and decryption with password-based security
+- Cookie header manipulation
+- Full support for cookie attributes (secure, httpOnly, sameSite, etc.)
+
+## Cookie interface
+
+The core `Cookie` interface represents an HTTP cookie with all standard attributes:
+
+```typescript
+interface Cookie {
+  name: string;
+  value: string;
+  domain?: string;
+  expires?: Date;
+  httpOnly?: boolean;
+  maxAge?: number;
+  path?: string;
+  priority?: "low" | "medium" | "high";
+  sameSite?: "strict" | "lax" | "none";
+  secure?: boolean;
+  partitioned?: boolean;
+  extra?: Record<string, string>;
+}
+```
+
+## Basic cookie operations
+
+### Parse a cookie
+
+Parse a Set-Cookie header value into a Cookie object:
+
+```typescript
+import { parseCookie } from "@temelj/request";
+
+const cookie = parseCookie(
+  "test=42; Expires=Mon, 01 Jan 2024 00:00:00 GMT; Max-Age=42; Domain=example.com; Path=/; HttpOnly; SameSite=Lax; Priority=high; Partitioned;"
+);
+
+console.log(cookie);
+// {
+//   name: "test",
+//   value: "42",
+//   domain: "example.com",
+//   expires: Date("2024-01-01"),
+//   httpOnly: true,
+//   maxAge: 42,
+//   path: "/",
+//   priority: "high",
+//   sameSite: "lax",
+//   partitioned: true
+// }
+```
+
+<Note>
+`parseCookie` returns `undefined` if the cookie string is invalid.
+</Note>
+
+### Serialize a cookie
+
+Convert a Cookie object into a Set-Cookie header value:
+
+```typescript
+import { serializeCookie, type Cookie } from "@temelj/request";
+
+const cookie: Cookie = {
+  name: "session",
+  value: "abc123",
+  domain: "example.com",
+  expires: new Date("2024-01-01"),
+  httpOnly: true,
+  maxAge: 3600,
+  path: "/",
+  priority: "high",
+  sameSite: "lax",
+  secure: true,
+  partitioned: true,
+};
+
+const headerValue = serializeCookie(cookie);
+console.log(headerValue);
+// "session=abc123; Expires=Mon, 01 Jan 2024 00:00:00 GMT; Max-Age=3600; Domain=example.com; Path=/; Secure; HttpOnly; SameSite=Lax; Priority=high;; Partitioned;"
+```
+
+## Cookie headers
+
+Work with multiple cookies in Cookie headers:
+
+<CodeGroup>
+
+```typescript Parse cookie header
+import { parseCookieHeader } from "@temelj/request";
+
+const cookies = parseCookieHeader("session=abc123; user=john");
+console.log(cookies);
+// [
+//   { name: "session", value: "abc123" },
+//   { name: "user", value: "john" }
+// ]
+```
+
+```typescript Serialize cookie header
+import { serializeCookieHeader } from "@temelj/request";
+
+const headerValue = serializeCookieHeader([
+  { name: "session", value: "abc123" },
+  { name: "user", value: "john" },
+]);
+
+console.log(headerValue);
+// "session=abc123; user=john"
+```
+
+</CodeGroup>
+
+## Cookie encryption
+
+Encrypt cookie values with password-based encryption for secure transmission:
+
+### Encrypt a cookie value
+
+```typescript
+import { encryptCookieValue } from "@temelj/request";
+
+const password = "a".repeat(32); // Minimum 32 characters
+const encrypted = await encryptCookieValue("sensitive-data", { password });
+
+console.log(encrypted);
+// "1|base64_iv|base64_salt|base64_encrypted|base64_signature|base64_sign_salt"
+```
+
+<Warning>
+The password must be at least 32 characters long. An error will be thrown if the password is shorter.
+</Warning>
+
+### Decrypt a cookie value
+
+```typescript
+import { decryptCookieValue } from "@temelj/request";
+
+const password = "a".repeat(32);
+const decrypted = await decryptCookieValue(encrypted, { password });
+
+console.log(decrypted);
+// "sensitive-data"
+```
+
+<Note>
+`decryptCookieValue` returns `undefined` if decryption fails due to invalid signature or wrong password.
+</Note>
+
+### Serialize and parse encrypted cookies
+
+<Tabs>
+  <Tab title="Serialize encrypted">
+    ```typescript
+    import { serializeEncryptedCookie } from "@temelj/request";
+
+    const cookie = await serializeEncryptedCookie(
+      { name: "session", value: "secret-token" },
+      { password: "a".repeat(32) }
+    );
+
+    console.log(cookie);
+    // "session=1|...|...|...|...|..."
+    // The value is encrypted and cannot be read without the password
+    ```
+  </Tab>
+  <Tab title="Parse encrypted">
+    ```typescript
+    import { parseEncryptedCookie } from "@temelj/request";
+
+    const cookie = await parseEncryptedCookie(
+      "session=1|...|...|...|...|...",
+      { password: "a".repeat(32) }
+    );
+
+    console.log(cookie);
+    // { name: "session", value: "secret-token" }
+    ```
+  </Tab>
+</Tabs>
+
+## Encryption options
+
+Customize the encryption algorithm and parameters:
+
+```typescript
+interface CookieEncryptionOptions {
+  password: string;
+  algorithm?: string; // Default: "AES-CBC"
+  integrityAlgorithm?: string; // Default: "SHA-256"
+  ivBits?: number; // Default: 128
+  keyBits?: number; // Default: 256
+  saltsBits?: number; // Default: 256
+}
+```
+
+### Example with custom options
+
+```typescript
+import { encryptCookieValue } from "@temelj/request";
+
+const encrypted = await encryptCookieValue("data", {
+  password: "a".repeat(32),
+  algorithm: "AES-CBC",
+  integrityAlgorithm: "SHA-256",
+  ivBits: 128,
+  keyBits: 256,
+  saltsBits: 256,
+});
+```
+
+## Complete example
+
+Here's a complete example showing cookie creation, encryption, and parsing:
+
+```typescript
+import {
+  serializeEncryptedCookie,
+  parseEncryptedCookie,
+  type Cookie,
+} from "@temelj/request";
+
+const password = "my-super-secret-password-32-chars-long";
+
+// Create and encrypt a cookie
+const cookie: Cookie = {
+  name: "user_session",
+  value: JSON.stringify({ userId: "123", token: "secret" }),
+  domain: "example.com",
+  path: "/",
+  httpOnly: true,
+  secure: true,
+  sameSite: "strict",
+  maxAge: 86400, // 24 hours
+};
+
+const setCookieHeader = await serializeEncryptedCookie(cookie, { password });
+
+// Send this header to the client
+console.log("Set-Cookie:", setCookieHeader);
+
+// Later, parse the encrypted cookie from the client
+const parsedCookie = await parseEncryptedCookie(setCookieHeader, { password });
+
+if (parsedCookie) {
+  const sessionData = JSON.parse(parsedCookie.value);
+  console.log("User ID:", sessionData.userId);
+}
+```
+
+## Type exports
+
+```typescript
+export interface Cookie {
+  name: string;
+  value: string;
+  domain?: string;
+  expires?: Date;
+  httpOnly?: boolean;
+  maxAge?: number;
+  path?: string;
+  priority?: "low" | "medium" | "high";
+  sameSite?: "strict" | "lax" | "none";
+  secure?: boolean;
+  partitioned?: boolean;
+  extra?: Record<string, string>;
+}
+
+export function parseCookie(source: string): Cookie | undefined;
+export function serializeCookie(cookie: Cookie): string;
+
+export function parseEncryptedCookie(
+  source: string,
+  options: CookieEncryptionOptions
+): Promise<Cookie | undefined>;
+
+export function serializeEncryptedCookie(
+  cookie: Cookie,
+  options: CookieEncryptionOptions
+): Promise<string>;
+
+export function parseCookieHeader(header: string): Cookie[];
+export function serializeCookieHeader(cookies: Cookie[]): string;
+
+export function encryptCookieValue(
+  value: string,
+  options: CookieEncryptionOptions
+): Promise<string>;
+
+export function decryptCookieValue(
+  value: string,
+  options: CookieEncryptionOptions
+): Promise<string | undefined>;
+```
+
+## Security considerations
+
+<Accordion title="Password requirements">
+  Passwords must be at least 32 characters long to ensure adequate security. The package uses PBKDF2 for key derivation and HMAC for integrity checking.
+</Accordion>
+
+<Accordion title="Encryption algorithm">
+  The default encryption uses AES-CBC with 256-bit keys. The encrypted cookie value includes the IV, salt, encrypted data, and HMAC signature for integrity verification.
+</Accordion>
+
+<Accordion title="Timing attacks">
+  The package uses `timingSafeEqual` for signature comparison to prevent timing attacks when verifying encrypted cookies.
+</Accordion>
+
+<Tip>
+Always use HTTPS when transmitting cookies with the `secure: true` flag to prevent interception.
+</Tip>

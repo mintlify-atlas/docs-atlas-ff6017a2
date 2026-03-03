@@ -1,0 +1,232 @@
+---
+title: HSL color space
+description: Functions for working with HSL colors
+---
+
+## Types
+
+### HslColor
+
+Represents an HSL color.
+
+<ResponseField name="hue" type="number" required>
+  The hue value in degrees (0-360)
+</ResponseField>
+
+<ResponseField name="saturation" type="number" required>
+  The saturation value (0-1)
+</ResponseField>
+
+<ResponseField name="lightness" type="number" required>
+  The lightness value (0-1)
+</ResponseField>
+
+<ResponseField name="alpha" type="number">
+  The alpha channel value (0-1). Optional.
+</ResponseField>
+
+## fromHsl
+
+Creates an HSL color from the given HSL values.
+
+<ParamField path="hue" type="number" required>
+  The hue value in degrees (0-360)
+</ParamField>
+
+<ParamField path="saturation" type="number" required>
+  The saturation value (0-1)
+</ParamField>
+
+<ParamField path="lightness" type="number" required>
+  The lightness value (0-1)
+</ParamField>
+
+<ParamField path="alpha" type="number">
+  The alpha channel value (0-1)
+</ParamField>
+
+<ResponseField name="return" type="HslColor">
+  An HSL color object
+</ResponseField>
+
+### Example
+
+```typescript
+import { fromHsl } from "@temelj/color";
+
+const red = fromHsl(0, 1, 0.5);
+console.log(red); // { hue: 0, saturation: 1, lightness: 0.5 }
+
+const lightBlue = fromHsl(200, 0.7, 0.6, 0.8);
+console.log(lightBlue);
+// { hue: 200, saturation: 0.7, lightness: 0.6, alpha: 0.8 }
+```
+
+## isValidHsl
+
+Checks if an HSL color is valid and normalized.
+
+<ParamField path="color" type="HslColor" required>
+  The color to check
+</ParamField>
+
+<ResponseField name="return" type="boolean">
+  True if the color is valid, false otherwise
+</ResponseField>
+
+### Example
+
+```typescript
+import { isValidHsl, fromHsl } from "@temelj/color";
+
+const valid = fromHsl(180, 0.5, 0.5);
+console.log(isValidHsl(valid)); // true
+
+const invalid = { hue: 400, saturation: 0.5, lightness: 0.5 };
+console.log(isValidHsl(invalid)); // false (hue > 360)
+```
+
+## normalizeHsl
+
+Normalizes an HSL color by clamping values to valid ranges.
+
+<ParamField path="color" type="HslColor" required>
+  The color to normalize
+</ParamField>
+
+<ResponseField name="return" type="HslColor">
+  The normalized color
+</ResponseField>
+
+### Example
+
+```typescript
+import { normalizeHsl } from "@temelj/color";
+
+const color = { hue: 370, saturation: 1.5, lightness: -0.2 };
+const normalized = normalizeHsl(color);
+console.log(normalized);
+// { hue: 10, saturation: 1, lightness: 0 }
+```
+
+## hslToRgb
+
+Converts an HSL color to RGB.
+
+<ParamField path="color" type="HslColor" required>
+  The HSL color to convert
+</ParamField>
+
+<ResponseField name="return" type="Color">
+  The RGB color
+</ResponseField>
+
+### Example
+
+```typescript
+import { fromHsl, hslToRgb } from "@temelj/color";
+
+const hsl = fromHsl(120, 1, 0.5); // Pure green
+const rgb = hslToRgb(hsl);
+console.log(rgb); // { red: 0, green: 255, blue: 0 }
+```
+
+## rgbToHsl
+
+Converts an RGB color to HSL.
+
+<ParamField path="color" type="Color" required>
+  The RGB color to convert
+</ParamField>
+
+<ResponseField name="return" type="HslColor">
+  The HSL color
+</ResponseField>
+
+### Example
+
+```typescript
+import { fromRgb, rgbToHsl } from "@temelj/color";
+
+const rgb = fromRgb(255, 0, 0); // Pure red
+const hsl = rgbToHsl(rgb);
+console.log(hsl); // { hue: 0, saturation: 1, lightness: 0.5 }
+```
+
+## toHslString
+
+Converts a color to a CSS hsl color string.
+
+<ParamField path="color" type="HslColor" required>
+  The color to convert
+</ParamField>
+
+<ResponseField name="return" type="string">
+  A CSS hsl color string
+</ResponseField>
+
+### Example
+
+```typescript
+import { fromHsl, toHslString } from "@temelj/color";
+
+const color = fromHsl(200, 0.7, 0.5);
+const str = toHslString(color);
+console.log(str); // "hsl(200, 70%, 50%)"
+```
+
+## toHslaString
+
+Converts a color to a CSS hsla color string.
+
+<ParamField path="color" type="HslColor" required>
+  The color to convert
+</ParamField>
+
+<ResponseField name="return" type="string">
+  A CSS hsla color string
+</ResponseField>
+
+### Example
+
+```typescript
+import { fromHsl, toHslaString } from "@temelj/color";
+
+const color = fromHsl(200, 0.7, 0.5, 0.8);
+const str = toHslaString(color);
+console.log(str); // "hsla(200, 70%, 50%, 0.8)"
+```
+
+## lerpHsl
+
+Interpolates between two HSL colors.
+
+<ParamField path="a" type="HslColor" required>
+  The first color
+</ParamField>
+
+<ParamField path="b" type="HslColor" required>
+  The second color
+</ParamField>
+
+<ParamField path="t" type="number" required>
+  The interpolation factor (0-1)
+</ParamField>
+
+<ResponseField name="return" type="HslColor">
+  The interpolated color
+</ResponseField>
+
+### Example
+
+```typescript
+import { fromHsl, lerpHsl } from "@temelj/color";
+
+const red = fromHsl(0, 1, 0.5);
+const blue = fromHsl(240, 1, 0.5);
+
+// Midpoint between red and blue
+const purple = lerpHsl(red, blue, 0.5);
+console.log(purple);
+// Takes the shortest path around the hue wheel
+```

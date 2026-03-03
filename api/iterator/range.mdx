@@ -1,0 +1,264 @@
+---
+title: Range utilities
+description: Functions and types for working with numeric ranges
+---
+
+## Types
+
+### NumericRange
+
+A numeric range consisting of individual numbers and range bounds.
+
+<ResponseField name="NumericRange" type="Array<NumericRangePart>">
+  An array of numbers and/or range bounds
+</ResponseField>
+
+### NumericRangePart
+
+<ResponseField name="NumericRangePart" type="number | NumericRangeBound">
+  Either a single number or a range bound
+</ResponseField>
+
+### NumericRangeBound
+
+Represents a numeric range bound with start and end values.
+
+<ResponseField name="from" type="number" required>
+  The starting value of the range
+</ResponseField>
+
+<ResponseField name="to" type="number" required>
+  The ending value of the range (inclusive)
+</ResponseField>
+
+## parseNumericRange
+
+Parses a string representation of a numeric range into a NumericRange array.
+
+<ParamField path="s" type="string" required>
+  The string to parse (e.g., "1,3,5..10,15..=20")
+</ParamField>
+
+<ResponseField name="return" type="NumericRange">
+  A parsed numeric range
+</ResponseField>
+
+<ResponseField name="throws" type="NumericRangeError">
+  Throws if the input string contains invalid integers or ranges
+</ResponseField>
+
+### Example
+
+```typescript
+import { parseNumericRange } from "@temelj/iterator";
+
+const range = parseNumericRange("1,3,5..8,10..=12");
+console.log(range);
+// [1, 3, { from: 5, to: 7 }, { from: 10, to: 12 }]
+
+// Decreasing ranges
+const decRange = parseNumericRange("10..5");
+console.log(decRange);
+// [{ from: 10, to: 6 }]
+```
+
+## numericRangeToString
+
+Converts a numeric range to a string representation.
+
+<ParamField path="range" type="NumericRange" required>
+  The range to convert
+</ParamField>
+
+<ResponseField name="return" type="string">
+  The string representation of the numeric range
+</ResponseField>
+
+### Example
+
+```typescript
+import { numericRangeToString } from "@temelj/iterator";
+
+const range = [1, { from: 5, to: 8 }, 10];
+const str = numericRangeToString(range);
+console.log(str); // "1,5..=8,10"
+```
+
+## flattenNumericRange
+
+Flattens a numeric range to a number array.
+
+<ParamField path="range" type="NumericRange" required>
+  The range to flatten
+</ParamField>
+
+<ResponseField name="return" type="number[]">
+  A flattened array of all numbers in the range
+</ResponseField>
+
+### Example
+
+```typescript
+import { parseNumericRange, flattenNumericRange } from "@temelj/iterator";
+
+const range = parseNumericRange("1,3,5..8");
+const flattened = flattenNumericRange(range);
+console.log(flattened); // [1, 3, 5, 6, 7]
+```
+
+## reverseNumericRange
+
+Reverses a numeric range.
+
+<ParamField path="range" type="NumericRange" required>
+  The range to reverse
+</ParamField>
+
+<ResponseField name="return" type="NumericRange">
+  A reversed range
+</ResponseField>
+
+### Example
+
+```typescript
+import { reverseNumericRange } from "@temelj/iterator";
+
+const range = [1, { from: 5, to: 8 }];
+const reversed = reverseNumericRange(range);
+console.log(reversed); // [{ from: 8, to: 5 }, 1]
+```
+
+## numericRangeContains
+
+Checks if a numeric range contains a specified value.
+
+<ParamField path="range" type="NumericRange" required>
+  The numeric range to check
+</ParamField>
+
+<ParamField path="value" type="number" required>
+  The value to check for in the range
+</ParamField>
+
+<ResponseField name="return" type="boolean">
+  True if the value is contained in the range, false otherwise
+</ResponseField>
+
+### Example
+
+```typescript
+import { parseNumericRange, numericRangeContains } from "@temelj/iterator";
+
+const range = parseNumericRange("1,5..10");
+console.log(numericRangeContains(range, 7));  // true
+console.log(numericRangeContains(range, 3));  // false
+console.log(numericRangeContains(range, 1));  // true
+```
+
+## isNumericRangeIncreasing
+
+Checks whether a range is strictly increasing.
+
+<ParamField path="range" type="NumericRange" required>
+  The range to check
+</ParamField>
+
+<ResponseField name="return" type="boolean">
+  True if the range is increasing, false otherwise
+</ResponseField>
+
+### Example
+
+```typescript
+import { isNumericRangeIncreasing } from "@temelj/iterator";
+
+const inc = [1, 3, { from: 5, to: 10 }];
+console.log(isNumericRangeIncreasing(inc)); // true
+
+const dec = [10, { from: 5, to: 1 }];
+console.log(isNumericRangeIncreasing(dec)); // false
+```
+
+## isNumericRangeDecreasing
+
+Checks whether a range is strictly decreasing.
+
+<ParamField path="range" type="NumericRange" required>
+  The range to check
+</ParamField>
+
+<ResponseField name="return" type="boolean">
+  True if the range is decreasing, false otherwise
+</ResponseField>
+
+## NumericRangeIterator
+
+An iterator that iterates over a numeric range.
+
+### Constructor
+
+<ParamField path="range" type="NumericRange" required>
+  The numeric range to iterate over
+</ParamField>
+
+### Example
+
+```typescript
+import { parseNumericRange, NumericRangeIterator } from "@temelj/iterator";
+
+const range = parseNumericRange("1,3,5..8");
+const iterator = new NumericRangeIterator(range);
+
+for (const num of iterator) {
+  console.log(num);
+}
+// Output: 1, 3, 5, 6, 7
+```
+
+## range
+
+A simple programmatic generator for numeric ranges.
+
+<ParamField path="start" type="number" required>
+  The starting number (inclusive)
+</ParamField>
+
+<ParamField path="end" type="number" required>
+  The ending number (exclusive)
+</ParamField>
+
+<ParamField path="step" type="number" default="1">
+  The step size
+</ParamField>
+
+<ResponseField name="return" type="Generator<number>">
+  A generator that yields numbers from start to end
+</ResponseField>
+
+<ResponseField name="throws" type="Error">
+  Throws an error if step is zero
+</ResponseField>
+
+### Example
+
+```typescript
+import { range } from "@temelj/iterator";
+
+// Basic range
+for (const n of range(0, 5)) {
+  console.log(n);
+}
+// Output: 0, 1, 2, 3, 4
+
+// Range with step
+for (const n of range(0, 10, 2)) {
+  console.log(n);
+}
+// Output: 0, 2, 4, 6, 8
+
+// Decreasing range
+for (const n of range(5, 0, -1)) {
+  console.log(n);
+}
+// Output: 5, 4, 3, 2, 1
+```

@@ -1,0 +1,579 @@
+---
+title: Vector2
+description: Two-dimensional vector operations and utilities for coordinate manipulation
+---
+
+## Overview
+
+The Vector2 API provides immutable operations for working with 2D vectors. All operations return new vector instances rather than modifying existing ones.
+
+## Types
+
+### Vector2
+
+Represents a point or direction in 2D space.
+
+```typescript
+interface Vector2 {
+  x: number;
+  y: number;
+}
+```
+
+<ParamField path="x" type="number" required>
+  The x coordinate
+</ParamField>
+
+<ParamField path="y" type="number" required>
+  The y coordinate
+</ParamField>
+
+## Constructor functions
+
+### of
+
+Creates a new vector with the specified coordinates.
+
+```typescript
+vector2.of(x: number, y: number): Vector2
+```
+
+<ParamField path="x" type="number" required>
+  The x coordinate
+</ParamField>
+
+<ParamField path="y" type="number" required>
+  The y coordinate
+</ParamField>
+
+<ResponseField name="result" type="Vector2">
+  A new vector with the specified coordinates
+</ResponseField>
+
+**Example:**
+
+```typescript
+import { vector2 } from "@temelj/math";
+
+const point = vector2.of(10, 20);
+console.log(point); // { x: 10, y: 20 }
+```
+
+### zero
+
+Creates a vector at the origin (0, 0).
+
+```typescript
+vector2.zero(): Vector2
+```
+
+<ResponseField name="result" type="Vector2">
+  A vector with x and y set to 0
+</ResponseField>
+
+**Example:**
+
+```typescript
+const origin = vector2.zero();
+console.log(origin); // { x: 0, y: 0 }
+```
+
+### copy
+
+Creates a shallow copy of a vector.
+
+```typescript
+vector2.copy(v: Vector2): Vector2
+```
+
+<ParamField path="v" type="Vector2" required>
+  The vector to copy
+</ParamField>
+
+<ResponseField name="result" type="Vector2">
+  A new vector with the same coordinates
+</ResponseField>
+
+**Example:**
+
+```typescript
+const original = vector2.of(5, 10);
+const duplicate = vector2.copy(original);
+console.log(duplicate); // { x: 5, y: 10 }
+```
+
+## Comparison
+
+### equals
+
+Checks if two vectors have the same coordinates.
+
+```typescript
+vector2.equals(a: Vector2, b: Vector2): boolean
+```
+
+<ParamField path="a" type="Vector2" required>
+  First vector to compare
+</ParamField>
+
+<ParamField path="b" type="Vector2" required>
+  Second vector to compare
+</ParamField>
+
+<ResponseField name="result" type="boolean">
+  True if both x and y coordinates are equal
+</ResponseField>
+
+**Example:**
+
+```typescript
+const v1 = vector2.of(10, 20);
+const v2 = vector2.of(10, 20);
+const v3 = vector2.of(15, 20);
+
+console.log(vector2.equals(v1, v2)); // true
+console.log(vector2.equals(v1, v3)); // false
+```
+
+## Arithmetic operations
+
+### plus
+
+Adds two vectors component-wise.
+
+```typescript
+vector2.plus(a: Vector2, b: Vector2): Vector2
+```
+
+<ParamField path="a" type="Vector2" required>
+  First vector
+</ParamField>
+
+<ParamField path="b" type="Vector2" required>
+  Second vector
+</ParamField>
+
+<ResponseField name="result" type="Vector2">
+  A new vector with summed coordinates
+</ResponseField>
+
+**Example:**
+
+```typescript
+const v1 = vector2.of(10, 20);
+const v2 = vector2.of(5, 3);
+const result = vector2.plus(v1, v2);
+console.log(result); // { x: 15, y: 23 }
+```
+
+### add
+
+Adds scalar values to a vector's coordinates.
+
+```typescript
+vector2.add(v: Vector2, x: number, y: number): Vector2
+```
+
+<ParamField path="v" type="Vector2" required>
+  The base vector
+</ParamField>
+
+<ParamField path="x" type="number" required>
+  Value to add to x coordinate
+</ParamField>
+
+<ParamField path="y" type="number" required>
+  Value to add to y coordinate
+</ParamField>
+
+<ResponseField name="result" type="Vector2">
+  A new vector with added values
+</ResponseField>
+
+**Example:**
+
+```typescript
+const v = vector2.of(10, 20);
+const result = vector2.add(v, 5, 3);
+console.log(result); // { x: 15, y: 23 }
+```
+
+### minus
+
+Subtracts one vector from another component-wise.
+
+```typescript
+vector2.minus(a: Vector2, b: Vector2): Vector2
+```
+
+<ParamField path="a" type="Vector2" required>
+  Vector to subtract from
+</ParamField>
+
+<ParamField path="b" type="Vector2" required>
+  Vector to subtract
+</ParamField>
+
+<ResponseField name="result" type="Vector2">
+  A new vector with subtracted coordinates
+</ResponseField>
+
+**Example:**
+
+```typescript
+const v1 = vector2.of(10, 20);
+const v2 = vector2.of(3, 5);
+const result = vector2.minus(v1, v2);
+console.log(result); // { x: 7, y: 15 }
+```
+
+### subtract
+
+Subtracts scalar values from a vector's coordinates.
+
+```typescript
+vector2.subtract(v: Vector2, x: number, y: number): Vector2
+```
+
+<ParamField path="v" type="Vector2" required>
+  The base vector
+</ParamField>
+
+<ParamField path="x" type="number" required>
+  Value to subtract from x coordinate
+</ParamField>
+
+<ParamField path="y" type="number" required>
+  Value to subtract from y coordinate
+</ParamField>
+
+<ResponseField name="result" type="Vector2">
+  A new vector with subtracted values
+</ResponseField>
+
+**Example:**
+
+```typescript
+const v = vector2.of(10, 20);
+const result = vector2.subtract(v, 3, 5);
+console.log(result); // { x: 7, y: 15 }
+```
+
+### times
+
+Multiplies two vectors component-wise.
+
+```typescript
+vector2.times(a: Vector2, b: Vector2): Vector2
+```
+
+<ParamField path="a" type="Vector2" required>
+  First vector
+</ParamField>
+
+<ParamField path="b" type="Vector2" required>
+  Second vector
+</ParamField>
+
+<ResponseField name="result" type="Vector2">
+  A new vector with multiplied coordinates
+</ResponseField>
+
+**Example:**
+
+```typescript
+const v1 = vector2.of(4, 5);
+const v2 = vector2.of(2, 3);
+const result = vector2.times(v1, v2);
+console.log(result); // { x: 8, y: 15 }
+```
+
+### multiply
+
+Multiplies a vector's coordinates by scalar values.
+
+```typescript
+vector2.multiply(v: Vector2, x: number, y: number): Vector2
+```
+
+<ParamField path="v" type="Vector2" required>
+  The base vector
+</ParamField>
+
+<ParamField path="x" type="number" required>
+  Multiplier for x coordinate
+</ParamField>
+
+<ParamField path="y" type="number" required>
+  Multiplier for y coordinate
+</ParamField>
+
+<ResponseField name="result" type="Vector2">
+  A new vector with multiplied values
+</ResponseField>
+
+**Example:**
+
+```typescript
+const v = vector2.of(4, 5);
+const result = vector2.multiply(v, 2, 3);
+console.log(result); // { x: 8, y: 15 }
+```
+
+### scale
+
+Scales a vector by a uniform factor.
+
+```typescript
+vector2.scale(v: Vector2, x: number): Vector2
+```
+
+<ParamField path="v" type="Vector2" required>
+  The vector to scale
+</ParamField>
+
+<ParamField path="x" type="number" required>
+  The scale factor applied to both coordinates
+</ParamField>
+
+<ResponseField name="result" type="Vector2">
+  A new vector scaled by the factor
+</ResponseField>
+
+**Example:**
+
+```typescript
+const v = vector2.of(3, 4);
+const scaled = vector2.scale(v, 2);
+console.log(scaled); // { x: 6, y: 8 }
+```
+
+### divided
+
+Divides one vector by another component-wise.
+
+```typescript
+vector2.divided(a: Vector2, b: Vector2): Vector2
+```
+
+<ParamField path="a" type="Vector2" required>
+  Numerator vector
+</ParamField>
+
+<ParamField path="b" type="Vector2" required>
+  Denominator vector
+</ParamField>
+
+<ResponseField name="result" type="Vector2">
+  A new vector with divided coordinates
+</ResponseField>
+
+**Example:**
+
+```typescript
+const v1 = vector2.of(10, 20);
+const v2 = vector2.of(2, 4);
+const result = vector2.divided(v1, v2);
+console.log(result); // { x: 5, y: 5 }
+```
+
+### divide
+
+Divides a vector's coordinates by scalar values.
+
+```typescript
+vector2.divide(v: Vector2, x: number, y: number): Vector2
+```
+
+<ParamField path="v" type="Vector2" required>
+  The vector to divide
+</ParamField>
+
+<ParamField path="x" type="number" required>
+  Divisor for x coordinate
+</ParamField>
+
+<ParamField path="y" type="number" required>
+  Divisor for y coordinate
+</ParamField>
+
+<ResponseField name="result" type="Vector2">
+  A new vector with divided values
+</ResponseField>
+
+**Example:**
+
+```typescript
+const v = vector2.of(10, 20);
+const result = vector2.divide(v, 2, 4);
+console.log(result); // { x: 5, y: 5 }
+```
+
+### negate
+
+Negates both components of a vector.
+
+```typescript
+vector2.negate(v: Vector2): Vector2
+```
+
+<ParamField path="v" type="Vector2" required>
+  The vector to negate
+</ParamField>
+
+<ResponseField name="result" type="Vector2">
+  A new vector with negated coordinates
+</ResponseField>
+
+**Example:**
+
+```typescript
+const v = vector2.of(5, -3);
+const negated = vector2.negate(v);
+console.log(negated); // { x: -5, y: 3 }
+```
+
+## Utility operations
+
+### snap
+
+Snaps a vector's coordinates to the nearest grid point.
+
+```typescript
+vector2.snap(v: Vector2, size: number): Vector2
+```
+
+<ParamField path="v" type="Vector2" required>
+  The vector to snap
+</ParamField>
+
+<ParamField path="size" type="number" required>
+  The grid size
+</ParamField>
+
+<ResponseField name="result" type="Vector2">
+  A new vector snapped to the grid
+</ResponseField>
+
+**Example:**
+
+```typescript
+const v = vector2.of(13, 27);
+const snapped = vector2.snap(v, 10);
+console.log(snapped); // { x: 10, y: 30 }
+```
+
+### clamp
+
+Clamps a vector's coordinates between minimum and maximum values.
+
+```typescript
+vector2.clamp(v: Vector2, min: Vector2, max: Vector2): Vector2
+```
+
+<ParamField path="v" type="Vector2" required>
+  The vector to clamp
+</ParamField>
+
+<ParamField path="min" type="Vector2" required>
+  Minimum bounds
+</ParamField>
+
+<ParamField path="max" type="Vector2" required>
+  Maximum bounds
+</ParamField>
+
+<ResponseField name="result" type="Vector2">
+  A new vector with clamped coordinates
+</ResponseField>
+
+**Example:**
+
+```typescript
+const v = vector2.of(150, -10);
+const min = vector2.of(0, 0);
+const max = vector2.of(100, 100);
+const clamped = vector2.clamp(v, min, max);
+console.log(clamped); // { x: 100, y: 0 }
+```
+
+### clampMin
+
+Clamps a vector's coordinates to minimum values only.
+
+```typescript
+vector2.clampMin(v: Vector2, min: Vector2): Vector2
+```
+
+<ParamField path="v" type="Vector2" required>
+  The vector to clamp
+</ParamField>
+
+<ParamField path="min" type="Vector2" required>
+  Minimum bounds
+</ParamField>
+
+<ResponseField name="result" type="Vector2">
+  A new vector with coordinates not below minimum
+</ResponseField>
+
+**Example:**
+
+```typescript
+const v = vector2.of(-5, 10);
+const min = vector2.of(0, 0);
+const clamped = vector2.clampMin(v, min);
+console.log(clamped); // { x: 0, y: 10 }
+```
+
+### clampMax
+
+Clamps a vector's coordinates to maximum values only.
+
+```typescript
+vector2.clampMax(v: Vector2, max: Vector2): Vector2
+```
+
+<ParamField path="v" type="Vector2" required>
+  The vector to clamp
+</ParamField>
+
+<ParamField path="max" type="Vector2" required>
+  Maximum bounds
+</ParamField>
+
+<ResponseField name="result" type="Vector2">
+  A new vector with coordinates not above maximum
+</ResponseField>
+
+**Example:**
+
+```typescript
+const v = vector2.of(150, 50);
+const max = vector2.of(100, 100);
+const clamped = vector2.clampMax(v, max);
+console.log(clamped); // { x: 100, y: 50 }
+```
+
+### displayString
+
+Converts a vector to a readable string representation.
+
+```typescript
+vector2.displayString(v: Vector2): string
+```
+
+<ParamField path="v" type="Vector2" required>
+  The vector to convert
+</ParamField>
+
+<ResponseField name="result" type="string">
+  A formatted string representation
+</ResponseField>
+
+**Example:**
+
+```typescript
+const v = vector2.of(10, 20);
+console.log(vector2.displayString(v)); // "Vector2(10, 20)"
+```

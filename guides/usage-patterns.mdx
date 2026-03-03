@@ -1,0 +1,440 @@
+---
+title: Common usage patterns
+description: Learn common patterns and best practices for using Temelj packages together in real-world applications
+---
+
+Temelj provides a collection of focused packages that work seamlessly together. This guide demonstrates practical patterns for combining multiple packages to solve common problems.
+
+## Error handling with Result and async operations
+
+Combine `@temelj/result` with `@temelj/async` to handle errors gracefully in asynchronous workflows.
+
+<CodeGroup>
+```typescript API calls with retry
+import { fromPromise, isOk, unwrap } from '@temelj/result';
+import { retry } from '@temelj/async';
+
+interface User {
+  id: string;
+  name: string;
+}
+
+async function fetchUserWithRetry(userId: string) {
+  const result = await fromPromise(
+    () => retry(
+      async () => {
+        const response = await fetch(`/api/users/${userId}`);
+        if (!response.ok) throw new Error('Failed to fetch user');
+        return response.json() as Promise<User>;
+      },
+      { times: 3, delay: 1000 }
+    ),
+    (error) => ({ message: String(error) })
+  );
+
+  if (isOk(result)) {
+    return result.value;
+  }
+
+  console.error('Failed after retries:', result.error);
+  return null;
+}
+```
+
+```typescript Form submission
+import { fromPromise, map, mapErr } from '@temelj/result';
+import { debounce } from '@temelj/async';
+
+const saveForm = debounce(
+  async (data: Record<string, unknown>) => {
+    const result = await fromPromise(
+      () => fetch('/api/save', {
+        method: 'POST',
+        body: JSON.stringify(data)
+      }),
+      (e) => ({ type: 'network_error' as const, message: String(e) })
+    );
+
+    return map(result, (response) => ({
+      success: response.ok,
+      timestamp: Date.now()
+    }));
+  },
+  500
+);
+```
+</CodeGroup>
+
+<Note>
+The Result type provides type-safe error handling without try-catch blocks, making your error paths explicit in the type system.
+</Note>
+
+## Data validation and transformation
+
+Use `@temelj/value` and `@temelj/string` together for robust data validation and normalization.
+
+<Steps>
+  <Step title="Validate input structure">
+    Check if values are primitive and safe to serialize
+    
+    ```typescript
+    import { isPrimitiveValue, isObjectPrimitive } from '@temelj/value';
+    import { toCamelCase, toSnakeCase } from '@temelj/string';
+
+    function validateApiPayload(data: unknown): data is Record<string, unknown> {
+      if (!isObjectPrimitive(data)) {
+        return false;
+      }
+      
+      // Check all values are primitive
+      return Object.values(data).every(isPrimitiveValue);
+    }
+    ```
+  </Step>
+
+  <Step title="Transform keys to match API contract">
+    Convert between naming conventions
+    
+    ```typescript
+    function normalizePayload(data: Record<string, unknown>) {
+      const normalized: Record<string, unknown> = {};
+      
+      for (const [key, value] of Object.entries(data)) {
+        // Convert camelCase to snake_case for API
+        normalized[toSnakeCase(key)] = value;
+      }
+      
+      return normalized;
+    }
+    ```
+  </Step>
+
+  <Step title="Handle the complete workflow">
+    Combine validation and transformation
+    
+    ```typescript
+    import { ok, err, type Result } from '@temelj/result';
+
+    function prepareApiPayload(
+      data: unknown
+    ): Result<Record<string, unknown>, string> {
+      if (!validateApiPayload(data)) {
+        return err('Invalid payload structure');
+      }
+      
+      return ok(normalizePayload(data));
+    }
+    ```
+  </Step>
+</Steps>
+
+## Concurrent operations with rate limiting
+
+Control concurrency when processing multiple items with `@temelj/async`.
+
+```typescript Batch processing with limits
+import { limit } from '@temelj/async';
+import { fromPromise, isOk } from '@temelj/result';
+
+interface ProcessResult {
+  id: string;
+  status: 'success' | 'failed';
+  data?: unknown;
+  error?: string;
+}
+
+async function processBatch(
+  items: string[],
+  maxConcurrent = 5
+): Promise<ProcessResult[]> {
+  const limitedProcess = limit(
+    async (id: string) => {
+      const result = await fromPromise(
+        () => fetch(`/api/process/${id}`).then(r => r.json()),
+        (e) => String(e)
+      );
+
+      if (isOk(result)) {
+        return { id, status: 'success' as const, data: result.value };
+      }
+      return { id, status: 'failed' as const, error: result.error };
+    },
+    maxConcurrent
+  );
+
+  return Promise.all(items.map(limitedProcess));
+}
+```
+
+<Warning>
+Without rate limiting, processing hundreds of items concurrently can overwhelm your server or hit API rate limits.
+</Warning>
+
+## Building type-safe APIs
+
+Combine multiple packages to create robust API clients.
+
+```typescript Type-safe API client
+import { retry, timeout } from '@temelj/async';
+import { fromPromise, unwrapOr, type Result } from '@temelj/result';
+import { isPrimitiveValue } from '@temelj/value';
+import { toKebabCase } from '@temelj/string';
+
+interface ApiOptions {
+  baseUrl: string;
+  timeout?: number;
+  retries?: number;
+}
+
+class ApiClient {
+  constructor(private options: ApiOptions) {}
+
+  async get<T>(
+    endpoint: string,
+    params?: Record<string, string>
+  ): Promise<Result<T, string>> {
+    const url = this.buildUrl(endpoint, params);
+    
+    return fromPromise(
+      () => timeout(
+        retry(
+          async () => {
+            const response = await fetch(url);
+            if (!response.ok) {
+              throw new Error(`HTTP ${response.status}`);
+            }
+            return response.json() as Promise<T>;
+          },
+          { times: this.options.retries ?? 3, delay: 1000 }
+        ),
+        this.options.timeout ?? 10000
+      ),
+      (error) => `Request failed: ${String(error)}`
+    );
+  }
+
+  private buildUrl(endpoint: string, params?: Record<string, string>): string {
+    const url = new URL(endpoint, this.options.baseUrl);
+    
+    if (params) {
+      for (const [key, value] of Object.entries(params)) {
+        // Normalize param keys to kebab-case
+        url.searchParams.set(toKebabCase(key), value);
+      }
+    }
+    
+    return url.toString();
+  }
+}
+
+// Usage
+const api = new ApiClient({ baseUrl: 'https://api.example.com' });
+
+const result = await api.get('/users/123');
+const user = unwrapOr(result, null);
+```
+
+## Stream processing patterns
+
+Handle data streams efficiently with async utilities.
+
+<Accordion title="Real-time event processing">
+```typescript Event stream handler
+import { throttle, map as asyncMap } from '@temelj/async';
+import { ok, err, isOk, type Result } from '@temelj/result';
+
+interface Event {
+  type: string;
+  timestamp: number;
+  data: unknown;
+}
+
+class EventProcessor {
+  private handlers = new Map<string, (data: unknown) => Promise<void>>();
+
+  on(eventType: string, handler: (data: unknown) => Promise<void>) {
+    this.handlers.set(eventType, throttle(handler, 100));
+  }
+
+  async process(events: Event[]): Promise<Result<void, string>[]> {
+    return asyncMap(
+      events,
+      async (event) => {
+        const handler = this.handlers.get(event.type);
+        
+        if (!handler) {
+          return err(`No handler for event type: ${event.type}`);
+        }
+
+        try {
+          await handler(event.data);
+          return ok(undefined);
+        } catch (error) {
+          return err(`Handler failed: ${String(error)}`);
+        }
+      }
+    );
+  }
+}
+```
+</Accordion>
+
+## Working with iterators
+
+Use `@temelj/iterator` for efficient data processing.
+
+```typescript Lazy data transformation
+import { filter, map, take } from '@temelj/iterator';
+import { isPrimitiveValue } from '@temelj/value';
+import { toPascalCase } from '@temelj/string';
+
+function* generateUsers() {
+  let id = 1;
+  while (true) {
+    yield {
+      id: id++,
+      name: `user_${id}`,
+      active: Math.random() > 0.5
+    };
+  }
+}
+
+// Process only what you need
+const activeUsers = filter(
+  generateUsers(),
+  (user) => user.active
+);
+
+const normalizedUsers = map(
+  activeUsers,
+  (user) => ({
+    ...user,
+    name: toPascalCase(user.name)
+  })
+);
+
+const firstTen = Array.from(take(normalizedUsers, 10));
+```
+
+<Tip>
+Iterators process data lazily, so you can work with infinite sequences without loading everything into memory.
+</Tip>
+
+## Combining string utilities
+
+Transform and normalize strings across your application.
+
+```typescript Multi-format key converter
+import { 
+  toCamelCase, 
+  toSnakeCase, 
+  toPascalCase,
+  toKebabCase 
+} from '@temelj/string';
+
+type CaseFormat = 'camel' | 'snake' | 'pascal' | 'kebab';
+
+function convertKeys(
+  obj: Record<string, unknown>,
+  targetFormat: CaseFormat
+): Record<string, unknown> {
+  const converter = {
+    camel: toCamelCase,
+    snake: toSnakeCase,
+    pascal: toPascalCase,
+    kebab: toKebabCase
+  }[targetFormat];
+
+  const result: Record<string, unknown> = {};
+  
+  for (const [key, value] of Object.entries(obj)) {
+    result[converter(key)] = value;
+  }
+  
+  return result;
+}
+
+// Convert API response from snake_case to camelCase
+const apiResponse = {
+  user_id: '123',
+  first_name: 'John',
+  last_name: 'Doe',
+  created_at: '2024-01-01'
+};
+
+const clientData = convertKeys(apiResponse, 'camel');
+// { userId: '123', firstName: 'John', lastName: 'Doe', createdAt: '2024-01-01' }
+```
+
+## Advanced async patterns
+
+Build complex async workflows with multiple utilities.
+
+<CodeGroup>
+```typescript Queue with backpressure
+import { Queue } from '@temelj/async';
+import { fromPromise, isErr } from '@temelj/result';
+
+const queue = new Queue<string>();
+
+async function processQueue() {
+  for await (const item of queue) {
+    const result = await fromPromise(
+      () => fetch(`/api/process/${item}`),
+      (e) => String(e)
+    );
+
+    if (isErr(result)) {
+      console.error(`Failed to process ${item}:`, result.error);
+      // Requeue for retry
+      await queue.enqueue(item);
+    }
+  }
+}
+```
+
+```typescript Mutex for critical sections
+import { Mutex } from '@temelj/async';
+
+const mutex = new Mutex();
+let sharedResource = 0;
+
+async function incrementSafely() {
+  await mutex.runExclusive(async () => {
+    const current = sharedResource;
+    // Simulate async work
+    await new Promise(resolve => setTimeout(resolve, 10));
+    sharedResource = current + 1;
+  });
+}
+
+// Run multiple increments concurrently
+await Promise.all([
+  incrementSafely(),
+  incrementSafely(),
+  incrementSafely()
+]);
+
+console.log(sharedResource); // Always 3, never race conditions
+```
+</CodeGroup>
+
+## Best practices
+
+<Steps>
+  <Step title="Use Result for expected errors">
+    Reserve exceptions for truly exceptional cases. Use the Result type for business logic errors that you anticipate and want to handle explicitly.
+  </Step>
+
+  <Step title="Combine utilities for cleaner code">
+    Don't reinvent the wheel. Temelj packages are designed to work together - combine them to eliminate boilerplate.
+  </Step>
+
+  <Step title="Leverage type inference">
+    TypeScript will infer most types automatically. Only add explicit type annotations where they improve clarity.
+  </Step>
+
+  <Step title="Use AbortSignal for cancellation">
+    Many async utilities accept an AbortSignal. Use it to cancel operations when components unmount or requests become stale.
+  </Step>
+</Steps>

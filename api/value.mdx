@@ -1,0 +1,463 @@
+---
+title: Value utilities
+description: Type checking, comparison, and transformation utilities for JavaScript values
+---
+
+## Overview
+
+The value utilities module provides functions for working with primitive values, deep equality comparison, and value transformations.
+
+## Type definitions
+
+### Primitive
+
+A JavaScript value that is not an object and has no methods or properties.
+
+```typescript
+type Primitive = 
+  | string
+  | boolean
+  | number
+  | bigint
+  | symbol
+  | null
+  | undefined;
+```
+
+### PrimitiveObject
+
+A plain JavaScript object with primitive values.
+
+```typescript
+type PrimitiveObject = { [key: string]: PrimitiveValue };
+```
+
+### PrimitiveValue
+
+A primitive value, primitive object, or array of primitive values.
+
+```typescript
+type PrimitiveValue = 
+  | Primitive
+  | PrimitiveObject
+  | Array<PrimitiveValue>;
+```
+
+### JsonValue
+
+A valid JSON value.
+
+```typescript
+type JsonValue =
+  | string
+  | number
+  | boolean
+  | null
+  | JsonObject
+  | Array<JsonValue>;
+```
+
+### JsonObject
+
+A valid JSON object.
+
+```typescript
+type JsonObject = { [key: string]: JsonValue };
+```
+
+## Type checking
+
+### isValuePrimitive
+
+Checks if a value is a primitive value (not an object).
+
+```typescript
+function isValuePrimitive(value: unknown): value is Primitive
+```
+
+<ParamField path="value" type="unknown" required>
+  The value to check
+</ParamField>
+
+<ResponseField name="result" type="boolean">
+  True if the value is a primitive (string, number, boolean, bigint, symbol, null, or undefined)
+</ResponseField>
+
+**Example:**
+
+```typescript
+import { isValuePrimitive } from "@temelj/value";
+
+console.log(isValuePrimitive("hello"));     // true
+console.log(isValuePrimitive(42));          // true
+console.log(isValuePrimitive(true));        // true
+console.log(isValuePrimitive(null));        // true
+console.log(isValuePrimitive(undefined));   // true
+console.log(isValuePrimitive({}));          // false
+console.log(isValuePrimitive([]));          // false
+```
+
+### isObjectPrimitive
+
+Checks if a value is a plain object (not a class instance or special object).
+
+```typescript
+function isObjectPrimitive(obj: unknown): obj is PrimitiveObject
+```
+
+<ParamField path="obj" type="unknown" required>
+  The value to check
+</ParamField>
+
+<ResponseField name="result" type="boolean">
+  True if the value is a plain object literal
+</ResponseField>
+
+**Example:**
+
+```typescript
+import { isObjectPrimitive } from "@temelj/value";
+
+console.log(isObjectPrimitive({ a: 1 }));         // true
+console.log(isObjectPrimitive({}));               // true
+console.log(isObjectPrimitive(new Date()));       // false
+console.log(isObjectPrimitive(new Map()));        // false
+console.log(isObjectPrimitive([]));               // false
+console.log(isObjectPrimitive(null));             // false
+```
+
+### isObjectDeepPrimitive
+
+Checks if an object and all its nested values are primitive.
+
+```typescript
+function isObjectDeepPrimitive(obj: unknown): obj is PrimitiveObject
+```
+
+<ParamField path="obj" type="unknown" required>
+  The object to check
+</ParamField>
+
+<ResponseField name="result" type="boolean">
+  True if the object is a plain object and all nested values are primitive
+</ResponseField>
+
+**Example:**
+
+```typescript
+import { isObjectDeepPrimitive } from "@temelj/value";
+
+console.log(isObjectDeepPrimitive({ a: 1, b: "hello" }));           // true
+console.log(isObjectDeepPrimitive({ a: 1, b: { c: 2 } }));          // true
+console.log(isObjectDeepPrimitive({ a: 1, b: new Date() }));        // false
+console.log(isObjectDeepPrimitive({ a: 1, b: { c: new Date() } })); // false
+```
+
+### isPrimitiveValue
+
+Checks if a value is a primitive value (including deeply primitive objects).
+
+```typescript
+function isPrimitiveValue(value: unknown): value is PrimitiveValue
+```
+
+<ParamField path="value" type="unknown" required>
+  The value to check
+</ParamField>
+
+<ResponseField name="result" type="boolean">
+  True if the value is primitive or a deeply primitive object/array
+</ResponseField>
+
+**Example:**
+
+```typescript
+import { isPrimitiveValue } from "@temelj/value";
+
+console.log(isPrimitiveValue(42));                     // true
+console.log(isPrimitiveValue("hello"));                // true
+console.log(isPrimitiveValue({ a: 1, b: "hello" }));   // true
+console.log(isPrimitiveValue([1, 2, 3]));              // true
+console.log(isPrimitiveValue(new Date()));             // false
+```
+
+## Comparison
+
+### deepEquals
+
+Compares two values for deep equality.
+
+```typescript
+function deepEquals(a: unknown, b: unknown): boolean
+```
+
+<ParamField path="a" type="unknown" required>
+  The first value to compare
+</ParamField>
+
+<ParamField path="b" type="unknown" required>
+  The second value to compare
+</ParamField>
+
+<ResponseField name="result" type="boolean">
+  True if the values are deeply equal
+</ResponseField>
+
+**Example:**
+
+```typescript
+import { deepEquals } from "@temelj/value";
+
+// Primitive comparison
+console.log(deepEquals(42, 42));                    // true
+console.log(deepEquals("hello", "hello"));          // true
+
+// Object comparison
+console.log(deepEquals({ a: 1, b: 2 }, { a: 1, b: 2 }));     // true
+console.log(deepEquals({ a: 1, b: 2 }, { a: 1, b: 3 }));     // false
+
+// Nested object comparison
+const obj1 = { a: { b: { c: 1 } } };
+const obj2 = { a: { b: { c: 1 } } };
+console.log(deepEquals(obj1, obj2));                // true
+
+// Array comparison
+console.log(deepEquals([1, 2, 3], [1, 2, 3]));      // true
+console.log(deepEquals([1, 2, 3], [1, 2, 4]));      // false
+```
+
+## Transformation
+
+### primitivize
+
+Converts a value to a primitive value by transforming Maps, Sets, and custom objects.
+
+```typescript
+function primitivize(value: unknown): PrimitiveValue
+```
+
+<ParamField path="value" type="unknown" required>
+  The value to convert
+</ParamField>
+
+<ResponseField name="result" type="PrimitiveValue">
+  The primitive representation of the value
+</ResponseField>
+
+**Conversion rules:**
+
+- Maps → Objects (keys converted to strings)
+- Sets → Arrays
+- Arrays → Arrays with primitivized elements
+- Plain objects → Objects with primitivized values
+- Primitives → Unchanged
+- Other types → Throws error
+
+**Example:**
+
+```typescript
+import { primitivize } from "@temelj/value";
+
+// Map to object
+const map = new Map([["a", 1], ["b", 2]]);
+console.log(primitivize(map)); // { a: 1, b: 2 }
+
+// Set to array
+const set = new Set([1, 2, 3]);
+console.log(primitivize(set)); // [1, 2, 3]
+
+// Nested structures
+const nested = {
+  map: new Map([["x", 10]]),
+  set: new Set([1, 2]),
+  array: [new Set(["a", "b"])]
+};
+console.log(primitivize(nested));
+// {
+//   map: { x: 10 },
+//   set: [1, 2],
+//   array: [["a", "b"]]
+// }
+```
+
+## Record utilities
+
+### recordEquals
+
+Compares two records for equality, optionally using a custom comparison function.
+
+```typescript
+function recordEquals<V>(
+  a: Record<string, V>,
+  b: Record<string, V>,
+  compare?: (a: V, b: V) => boolean
+): boolean
+```
+
+<ParamField path="a" type="Record<string, V>" required>
+  The first record to compare
+</ParamField>
+
+<ParamField path="b" type="Record<string, V>" required>
+  The second record to compare
+</ParamField>
+
+<ParamField path="compare" type="(a: V, b: V) => boolean">
+  Optional custom comparison function. Defaults to deepEquals.
+</ParamField>
+
+<ResponseField name="result" type="boolean">
+  True if the records have the same keys and equal values
+</ResponseField>
+
+**Example:**
+
+```typescript
+import { recordEquals } from "@temelj/value";
+
+const a = { x: 1, y: 2 };
+const b = { x: 1, y: 2 };
+const c = { x: 1, y: 3 };
+
+console.log(recordEquals(a, b));  // true
+console.log(recordEquals(a, c));  // false
+
+// Custom comparison
+const users1 = { alice: { age: 25 }, bob: { age: 30 } };
+const users2 = { alice: { age: 25 }, bob: { age: 30 } };
+console.log(recordEquals(users1, users2, (a, b) => a.age === b.age)); // true
+```
+
+### recordIsEmpty
+
+Checks if a record has no keys.
+
+```typescript
+function recordIsEmpty<V>(value: Record<string, V>): boolean
+```
+
+<ParamField path="value" type="Record<string, V>" required>
+  The record to check
+</ParamField>
+
+<ResponseField name="result" type="boolean">
+  True if the record has no keys
+</ResponseField>
+
+**Example:**
+
+```typescript
+import { recordIsEmpty } from "@temelj/value";
+
+console.log(recordIsEmpty({}));           // true
+console.log(recordIsEmpty({ a: 1 }));     // false
+```
+
+### recordMerge
+
+Merges multiple records into a single record using deep merge.
+
+```typescript
+function recordMerge<T>(
+  values: Partial<T>[],
+  options?: RecordMergeOptions
+): T
+```
+
+<ParamField path="values" type="Partial<T>[]" required>
+  Array of records to merge
+</ParamField>
+
+<ParamField path="options" type="RecordMergeOptions">
+  Optional merge configuration
+</ParamField>
+
+<ResponseField name="result" type="T">
+  The merged record
+</ResponseField>
+
+**Example:**
+
+```typescript
+import { recordMerge } from "@temelj/value";
+
+const defaults = { port: 3000, host: "localhost" };
+const userConfig = { port: 8080 };
+const envConfig = { debug: true };
+
+const config = recordMerge([defaults, userConfig, envConfig]);
+console.log(config);
+// { port: 8080, host: "localhost", debug: true }
+```
+
+### RecordMergeOptions
+
+Options for record merging.
+
+```typescript
+interface RecordMergeOptions {
+  clone?: boolean;
+  arrayMerge?: <T, S>(target: T[], source: S[]) => (T & S)[];
+  isMergable?: (value: unknown) => boolean;
+}
+```
+
+<ParamField path="clone" type="boolean">
+  Whether to clone values during merge. Defaults to true.
+</ParamField>
+
+<ParamField path="arrayMerge" type="function">
+  Custom function for merging arrays
+</ParamField>
+
+<ParamField path="isMergable" type="function">
+  Custom function to determine if a value should be merged
+</ParamField>
+
+## Common use cases
+
+### Configuration merging
+
+```typescript
+import { recordMerge } from "@temelj/value";
+
+function loadConfig() {
+  const defaults = { timeout: 30000, retries: 3 };
+  const userConfig = JSON.parse(localStorage.getItem("config") || "{}");
+  return recordMerge([defaults, userConfig]);
+}
+```
+
+### Deep comparison
+
+```typescript
+import { deepEquals } from "@temelj/value";
+
+function hasChanged(prev: unknown, next: unknown): boolean {
+  return !deepEquals(prev, next);
+}
+```
+
+### Serialization preparation
+
+```typescript
+import { primitivize } from "@temelj/value";
+
+function prepareForSerialization(data: unknown) {
+  const primitive = primitivize(data);
+  return JSON.stringify(primitive);
+}
+```
+
+### Type validation
+
+```typescript
+import { isPrimitiveValue } from "@temelj/value";
+
+function validateInput(value: unknown): value is PrimitiveValue {
+  if (!isPrimitiveValue(value)) {
+    throw new Error("Input must be a primitive value");
+  }
+  return true;
+}
+```

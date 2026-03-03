@@ -1,80 +1,213 @@
 ---
-title: "Quickstart"
-description: "Start building awesome documentation in minutes"
+title: Quickstart
+description: Get started with Temelj in minutes with practical examples
 ---
 
-## Get started in three steps
+This guide walks you through the most common use cases for Temelj packages. Each example uses real APIs from the library to solve practical problems.
 
-Get your documentation site running locally and make your first customization.
+## Installation
 
-### Step 1: Set up your local environment
+First, install the packages you need:
 
-<AccordionGroup>
-  <Accordion icon="copy" title="Clone your docs locally">
-    During the onboarding process, you created a GitHub repository with your docs content if you didn't already have one. You can find a link to this repository in your [dashboard](https://dashboard.mintlify.com).
+<CodeGroup>
+```bash npm
+npm install @temelj/async @temelj/result
+```
+
+```bash pnpm
+pnpm add @temelj/async @temelj/result
+```
+
+```bash jsr
+deno add jsr:@temelj/async jsr:@temelj/result
+```
+</CodeGroup>
+
+## Async operations with retry
+
+Use the retry function to handle transient failures with exponential backoff:
+
+```typescript
+import { retry } from '@temelj/async';
+
+// Retry an API call with exponential backoff
+const data = await retry(
+  async (attempt) => {
+    const response = await fetch('https://api.example.com/data');
+    if (!response.ok) throw new Error('Request failed');
+    return response.json();
+  },
+  {
+    times: 5,
+    delay: (attempt) => Math.pow(2, attempt) * 1000, // 1s, 2s, 4s, 8s, 16s
+  }
+);
+```
+
+<Tip>
+The retry function receives the current attempt number (0-indexed), allowing you to implement custom backoff strategies.
+</Tip>
+
+## Functional error handling with Result
+
+The Result type provides a type-safe way to handle errors without throwing exceptions:
+
+```typescript
+import { ok, err, isOk, unwrapOr, type Result } from '@temelj/result';
+
+function divide(a: number, b: number): Result<number, string> {
+  if (b === 0) {
+    return err('Division by zero');
+  }
+  return ok(a / b);
+}
+
+const result = divide(10, 2);
+
+if (isOk(result)) {
+  console.log('Result:', result.value); // 5
+} else {
+  console.log('Error:', result.error);
+}
+
+// Or use unwrapOr for a default value
+const value = unwrapOr(result, 0);
+```
+
+### Converting promises to Results
+
+```typescript
+import { fromPromise } from '@temelj/result';
+
+const result = await fromPromise(
+  fetch('https://api.example.com/data')
+);
+
+if (isOk(result)) {
+  const response = result.value;
+  // Handle success
+} else {
+  const error = result.error;
+  // Handle error
+}
+```
+
+## Working with iterators
+
+Use iterator utilities for lazy evaluation and efficient data processing:
+
+```typescript
+import { range, filter, map, take } from '@temelj/iterator';
+
+// Generate numbers lazily
+const numbers = range(1, 100);
+
+// Chain operations without intermediate arrays
+const result = Array.from(
+  take(
+    map(
+      filter(numbers, n => n % 2 === 0),
+      n => n * n
+    ),
+    5
+  )
+);
+
+console.log(result); // [4, 16, 36, 64, 100]
+```
+
+### Parsing numeric ranges
+
+```typescript
+import { parseNumericRange } from '@temelj/iterator';
+
+const range = parseNumericRange('1-5,8,10-12');
+console.log(range);
+// [{ start: 1, end: 5 }, { start: 8, end: 8 }, { start: 10, end: 12 }]
+```
+
+## String case conversions
+
+Convert between different naming conventions:
+
+```typescript
+import { camelCase, snakeCase, kebabCase, pascalCase } from '@temelj/string';
+
+const apiField = 'user_name';
+
+console.log(camelCase(apiField));  // 'userName'
+console.log(pascalCase(apiField)); // 'UserName'
+console.log(kebabCase(apiField));  // 'user-name'
+```
+
+## Math utilities
+
+Work with 2D vectors and rectangles:
+
+```typescript
+import { Vector2, clamp } from '@temelj/math';
+
+// Vector operations
+const v1 = new Vector2(3, 4);
+const v2 = new Vector2(1, 2);
+
+const sum = v1.add(v2);        // Vector2(4, 6)
+const scaled = v1.scale(2);    // Vector2(6, 8)
+const length = v1.length();    // 5
+
+// Clamp values to a range
+const value = clamp(15, 0, 10); // 10
+```
+
+## Combining utilities
+
+Here's a real-world example combining multiple packages:
+
+```typescript
+import { retry } from '@temelj/async';
+import { fromPromise, isOk, map } from '@temelj/result';
+import { camelCase } from '@temelj/string';
+
+// Fetch data with retry and convert to Result
+async function fetchUserData(userId: string) {
+  return await retry(async () => {
+    const result = await fromPromise(
+      fetch(`https://api.example.com/users/${userId}`)
+    );
     
-    To clone the repository locally so that you can make and preview changes to your docs, follow the [Cloning a repository](https://docs.github.com/en/repositories/creating-and-managing-repositories/cloning-a-repository) guide in the GitHub docs.
-  </Accordion>
-  <Accordion icon="rectangle-terminal" title="Start the preview server">
-    1. Install the Mintlify CLI: `npm i -g mint`
-    2. Navigate to your docs directory and run: `mint dev`
-    3. Open `http://localhost:3000` to see your docs live!
+    if (isOk(result)) {
+      const response = result.value;
+      const data = await response.json();
+      
+      // Convert snake_case keys to camelCase
+      return map(result, () => ({
+        userId: data.user_id,
+        firstName: data.first_name,
+        lastName: data.last_name,
+      }));
+    }
     
-    <Tip>Your preview updates automatically as you edit files.</Tip>
-  </Accordion>
-</AccordionGroup>
-
-### Step 2: Deploy your changes
-
-<AccordionGroup>
-  <Accordion icon="github" title="Install our GitHub app">
-    Install the Mintlify GitHub app from your [dashboard](https://dashboard.mintlify.com/settings/organization/github-app).
-    
-    Our GitHub app automatically deploys your changes to your docs site, so you don't need to manage deployments yourself.
-</Accordion>
-<Accordion icon="palette" title="Update your site name and colors">
-    For a first change, let's update the name and colors of your docs site.
-
-    1. Open `docs.json` in your editor.
-    2. Change the `"name"` field to your project name.
-    3. Update the `"colors"` to match your brand.
-    4. Save and see your changes instantly at `http://localhost:3000`.
-
-    <Tip>Try changing the primary color to see an immediate difference!</Tip>
-  </Accordion>
-</AccordionGroup>
-
-### Step 3: Go live
-
-<Accordion icon="rocket" title="Publish your docs">
-  1. Commit and push your changes.
-  2. Your docs will update and be live in moments!
-</Accordion>
+    return result;
+  }, {
+    times: 3,
+    delay: 1000,
+  });
+}
+```
 
 ## Next steps
 
-Now that you have your docs running, explore these key features:
-
 <CardGroup cols={2}>
-
-<Card title="Write Content" icon="pen-to-square" href="/essentials/markdown">
-  Learn MDX syntax and start writing your documentation.
-</Card>
-
-<Card title="Customize style" icon="palette" href="/essentials/settings">
-  Make your docs match your brand perfectly.
-</Card>
-
-<Card title="Add code examples" icon="square-code" href="/essentials/code">
-  Include syntax-highlighted code blocks.
-</Card>
-
-<Card title="API documentation" icon="code" href="/api-reference/introduction">
-  Auto-generate API docs from OpenAPI specs.
-</Card>
-
+  <Card title="Core Packages" icon="box" href="/packages/async">
+    Explore async, result, iterator, and value packages
+  </Card>
+  <Card title="API Reference" icon="code" href="/api/async/retry">
+    Dive into detailed API documentation
+  </Card>
+  <Card title="Usage Patterns" icon="lightbulb" href="/guides/usage-patterns">
+    Learn best practices and common patterns
+  </Card>
+  <Card title="TypeScript Integration" icon="shield" href="/guides/typescript-integration">
+    Configure TypeScript for optimal type safety
+  </Card>
 </CardGroup>
-
-<Note>
-  **Need help?** See our [full documentation](https://mintlify.com/docs) or join our [community](https://mintlify.com/community).
-</Note>

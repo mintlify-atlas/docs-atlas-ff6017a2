@@ -1,0 +1,147 @@
+---
+title: OKLCH color space
+description: Functions for working with OKLCH colors
+---
+
+## Types
+
+### OkLchColor
+
+Represents an OKLCH color.
+
+<ResponseField name="l" type="number" required>
+  Lightness component (0-1)
+</ResponseField>
+
+<ResponseField name="c" type="number" required>
+  Chroma component (colorfulness)
+</ResponseField>
+
+<ResponseField name="h" type="number" required>
+  Hue in degrees (0-360)
+</ResponseField>
+
+<ResponseField name="alpha" type="number">
+  The alpha channel value (0-1). Optional.
+</ResponseField>
+
+## rgbToOkLch
+
+Converts an RGB color to an OKLCH color.
+
+<ParamField path="color" type="Color" required>
+  The RGB color to convert
+</ParamField>
+
+<ResponseField name="return" type="OkLchColor">
+  The OKLCH color
+</ResponseField>
+
+### Example
+
+```typescript
+import { fromRgb, rgbToOkLch } from "@temelj/color";
+
+const rgb = fromRgb(255, 0, 0); // Pure red
+const oklch = rgbToOkLch(rgb);
+console.log(oklch);
+// { l: 0.627..., c: 0.257..., h: 29.23... }
+```
+
+## okLchToRgb
+
+Converts an OKLCH color to an RGB color.
+
+<ParamField path="color" type="OkLchColor" required>
+  The OKLCH color to convert
+</ParamField>
+
+<ResponseField name="return" type="Color">
+  The RGB color
+</ResponseField>
+
+### Example
+
+```typescript
+import { okLchToRgb } from "@temelj/color";
+
+const oklch = { l: 0.627, c: 0.257, h: 29.23 };
+const rgb = okLchToRgb(oklch);
+console.log(rgb); // Approximately { red: 255, green: 0, blue: 0 }
+```
+
+## okLabToOkLch
+
+Converts an OKLab color to an OKLCH color.
+
+<ParamField path="color" type="OkLabColor" required>
+  The OKLab color to convert
+</ParamField>
+
+<ResponseField name="return" type="OkLchColor">
+  The OKLCH color
+</ResponseField>
+
+### Example
+
+```typescript
+import { okLabToOkLch } from "@temelj/color";
+
+const oklab = { l: 0.5, a: 0.1, b: 0.2 };
+const oklch = okLabToOkLch(oklab);
+console.log(oklch);
+```
+
+## okLchToOkLab
+
+Converts an OKLCH color to an OKLab color.
+
+<ParamField path="color" type="OkLchColor" required>
+  The OKLCH color to convert
+</ParamField>
+
+<ResponseField name="return" type="OkLabColor">
+  The OKLab color
+</ResponseField>
+
+### Example
+
+```typescript
+import { okLchToOkLab } from "@temelj/color";
+
+const oklch = { l: 0.5, c: 0.1, h: 180 };
+const oklab = okLchToOkLab(oklch);
+console.log(oklab);
+```
+
+## About OKLCH color space
+
+OKLCH is a perceptually uniform color space based on OKLab, using cylindrical coordinates. It offers several advantages:
+
+- **Perceptual uniformity**: Equal changes in values correspond to equal perceptual changes
+- **Intuitive hue**: The hue component works like HSL but is perceptually accurate
+- **Wide gamut support**: Can represent colors beyond sRGB
+- **Modern standard**: Gaining adoption in CSS and design tools
+
+The components are:
+- **L**: Lightness from 0 (black) to 1 (white)
+- **C**: Chroma (colorfulness), typically 0 to 0.4
+- **H**: Hue in degrees (0-360)
+
+### Example
+
+```typescript
+import { fromRgb, rgbToOkLch, okLchToRgb } from "@temelj/color";
+
+// Create a color palette with consistent lightness
+const baseColor = rgbToOkLch(fromRgb(100, 150, 200));
+
+const palette = [
+  okLchToRgb({ ...baseColor, h: 0 }),    // Red
+  okLchToRgb({ ...baseColor, h: 120 }),  // Green
+  okLchToRgb({ ...baseColor, h: 240 }),  // Blue
+];
+
+// All colors have the same perceptual lightness and chroma
+console.log(palette);
+```

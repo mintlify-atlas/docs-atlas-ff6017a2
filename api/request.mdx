@@ -1,0 +1,477 @@
+---
+title: HTTP request utilities
+description: Cookie parsing, serialization, and encryption utilities for HTTP requests
+---
+
+## Overview
+
+The request utilities module provides comprehensive functions for working with HTTP cookies, including parsing, serialization, encryption, and header manipulation.
+
+## Cookie interface
+
+### Cookie
+
+Represents an HTTP cookie with all standard attributes.
+
+```typescript
+interface Cookie {
+  name: string;
+  value: string;
+  domain?: string;
+  expires?: Date;
+  httpOnly?: boolean;
+  maxAge?: number;
+  path?: string;
+  priority?: "low" | "medium" | "high";
+  sameSite?: "strict" | "lax" | "none";
+  secure?: boolean;
+  partitioned?: boolean;
+  extra?: Record<string, string>;
+}
+```
+
+<ParamField path="name" type="string" required>
+  The cookie name
+</ParamField>
+
+<ParamField path="value" type="string" required>
+  The cookie value
+</ParamField>
+
+<ParamField path="domain" type="string">
+  The domain the cookie applies to
+</ParamField>
+
+<ParamField path="expires" type="Date">
+  When the cookie expires
+</ParamField>
+
+<ParamField path="httpOnly" type="boolean">
+  Whether the cookie is HTTP-only (not accessible via JavaScript)
+</ParamField>
+
+<ParamField path="maxAge" type="number">
+  Maximum age in seconds
+</ParamField>
+
+<ParamField path="path" type="string">
+  The path the cookie applies to
+</ParamField>
+
+<ParamField path="priority" type="'low' | 'medium' | 'high'">
+  Cookie priority for resource budgeting
+</ParamField>
+
+<ParamField path="sameSite" type="'strict' | 'lax' | 'none'">
+  SameSite attribute for CSRF protection
+</ParamField>
+
+<ParamField path="secure" type="boolean">
+  Whether the cookie requires HTTPS
+</ParamField>
+
+<ParamField path="partitioned" type="boolean">
+  Whether the cookie is partitioned (CHIPS)
+</ParamField>
+
+<ParamField path="extra" type="Record<string, string>">
+  Additional custom cookie attributes
+</ParamField>
+
+## Basic operations
+
+### parseCookie
+
+Parses a Set-Cookie header value into a Cookie object.
+
+```typescript
+function parseCookie(source: string): Cookie | undefined
+```
+
+<ParamField path="source" type="string" required>
+  The Set-Cookie header value
+</ParamField>
+
+<ResponseField name="result" type="Cookie | undefined">
+  The parsed cookie, or undefined if invalid
+</ResponseField>
+
+**Example:**
+
+```typescript
+import { parseCookie } from "@temelj/request";
+
+const cookie = parseCookie("session=abc123; Path=/; HttpOnly; Secure");
+console.log(cookie);
+// {
+//   name: "session",
+//   value: "abc123",
+//   path: "/",
+//   httpOnly: true,
+//   secure: true
+// }
+```
+
+### serializeCookie
+
+Serializes a Cookie object into a Set-Cookie header value.
+
+```typescript
+function serializeCookie(cookie: Cookie): string
+```
+
+<ParamField path="cookie" type="Cookie" required>
+  The cookie to serialize
+</ParamField>
+
+<ResponseField name="result" type="string">
+  The Set-Cookie header value
+</ResponseField>
+
+**Example:**
+
+```typescript
+import { serializeCookie } from "@temelj/request";
+
+const cookie: Cookie = {
+  name: "session",
+  value: "abc123",
+  path: "/",
+  httpOnly: true,
+  secure: true,
+  sameSite: "strict",
+  maxAge: 3600
+};
+
+const headerValue = serializeCookie(cookie);
+console.log(headerValue);
+// "session=abc123; Path=/; Max-Age=3600; HttpOnly; Secure; SameSite=Strict"
+```
+
+## Header operations
+
+### parseCookieHeader
+
+Parses a Cookie header value into an array of cookies.
+
+```typescript
+function parseCookieHeader(header: string): Cookie[]
+```
+
+<ParamField path="header" type="string" required>
+  The Cookie header value (semicolon-separated)
+</ParamField>
+
+<ResponseField name="result" type="Cookie[]">
+  Array of parsed cookies
+</ResponseField>
+
+**Example:**
+
+```typescript
+import { parseCookieHeader } from "@temelj/request";
+
+const header = "session=abc123; user_id=42; theme=dark";
+const cookies = parseCookieHeader(header);
+console.log(cookies);
+// [
+//   { name: "session", value: "abc123" },
+//   { name: "user_id", value: "42" },
+//   { name: "theme", value: "dark" }
+// ]
+```
+
+### serializeCookieHeader
+
+Serializes an array of cookies into a Cookie header value.
+
+```typescript
+function serializeCookieHeader(cookies: Cookie[]): string
+```
+
+<ParamField path="cookies" type="Cookie[]" required>
+  Array of cookies to serialize
+</ParamField>
+
+<ResponseField name="result" type="string">
+  The Cookie header value
+</ResponseField>
+
+**Example:**
+
+```typescript
+import { serializeCookieHeader } from "@temelj/request";
+
+const cookies: Cookie[] = [
+  { name: "session", value: "abc123" },
+  { name: "user_id", value: "42" }
+];
+
+const header = serializeCookieHeader(cookies);
+console.log(header); // "session=abc123; user_id=42"
+```
+
+## Encryption
+
+### encryptCookieValue
+
+Encrypts a cookie value using AES-CBC encryption.
+
+```typescript
+function encryptCookieValue(
+  value: string,
+  options: CookieEncryptionOptions
+): Promise<string>
+```
+
+<ParamField path="value" type="string" required>
+  The value to encrypt
+</ParamField>
+
+<ParamField path="options" type="CookieEncryptionOptions" required>
+  Encryption configuration including password
+</ParamField>
+
+<ResponseField name="result" type="Promise<string>">
+  The encrypted value as a base64-encoded string with signature
+</ResponseField>
+
+**Example:**
+
+```typescript
+import { encryptCookieValue } from "@temelj/request";
+
+const encrypted = await encryptCookieValue("sensitive-data", {
+  password: "your-secure-password-at-least-32-chars-long!"
+});
+console.log(encrypted); // "1|iv_base64|salt_base64|encrypted_base64|signature|salt"
+```
+
+### decryptCookieValue
+
+Decrypts a cookie value encrypted with `encryptCookieValue`.
+
+```typescript
+function decryptCookieValue(
+  value: string,
+  options: CookieEncryptionOptions
+): Promise<string | undefined>
+```
+
+<ParamField path="value" type="string" required>
+  The encrypted value to decrypt
+</ParamField>
+
+<ParamField path="options" type="CookieEncryptionOptions" required>
+  Decryption configuration with the same password used for encryption
+</ParamField>
+
+<ResponseField name="result" type="Promise<string | undefined>">
+  The decrypted value, or undefined if decryption fails
+</ResponseField>
+
+**Example:**
+
+```typescript
+import { encryptCookieValue, decryptCookieValue } from "@temelj/request";
+
+const options = {
+  password: "your-secure-password-at-least-32-chars-long!"
+};
+
+const encrypted = await encryptCookieValue("secret", options);
+const decrypted = await decryptCookieValue(encrypted, options);
+console.log(decrypted); // "secret"
+```
+
+### parseEncryptedCookie
+
+Parses and decrypts an encrypted Set-Cookie header.
+
+```typescript
+function parseEncryptedCookie(
+  source: string,
+  options: CookieEncryptionOptions
+): Promise<Cookie | undefined>
+```
+
+<ParamField path="source" type="string" required>
+  The Set-Cookie header value with encrypted value
+</ParamField>
+
+<ParamField path="options" type="CookieEncryptionOptions" required>
+  Decryption configuration
+</ParamField>
+
+<ResponseField name="result" type="Promise<Cookie | undefined>">
+  The parsed cookie with decrypted value, or undefined if invalid
+</ResponseField>
+
+**Example:**
+
+```typescript
+import { parseEncryptedCookie } from "@temelj/request";
+
+const headerValue = "session=1|...|...|...|...|...; Path=/; HttpOnly";
+const cookie = await parseEncryptedCookie(headerValue, {
+  password: "your-secure-password-at-least-32-chars-long!"
+});
+
+if (cookie) {
+  console.log(cookie.value); // Decrypted value
+}
+```
+
+### serializeEncryptedCookie
+
+Encrypts a cookie value and serializes it as a Set-Cookie header.
+
+```typescript
+function serializeEncryptedCookie(
+  cookie: Cookie,
+  options: CookieEncryptionOptions
+): Promise<string>
+```
+
+<ParamField path="cookie" type="Cookie" required>
+  The cookie to encrypt and serialize
+</ParamField>
+
+<ParamField path="options" type="CookieEncryptionOptions" required>
+  Encryption configuration
+</ParamField>
+
+<ResponseField name="result" type="Promise<string>">
+  The Set-Cookie header value with encrypted cookie value
+</ResponseField>
+
+**Example:**
+
+```typescript
+import { serializeEncryptedCookie } from "@temelj/request";
+
+const cookie: Cookie = {
+  name: "session",
+  value: "sensitive-data",
+  path: "/",
+  httpOnly: true,
+  secure: true
+};
+
+const headerValue = await serializeEncryptedCookie(cookie, {
+  password: "your-secure-password-at-least-32-chars-long!"
+});
+
+console.log(headerValue);
+// "session=1|...|...|...|...|...; Path=/; HttpOnly; Secure"
+```
+
+## Configuration
+
+### CookieEncryptionOptions
+
+Options for cookie encryption and decryption.
+
+```typescript
+interface CookieEncryptionOptions {
+  password: string;
+  algorithm?: string;
+  integrityAlgorithm?: string;
+  ivBits?: number;
+  keyBits?: number;
+  saltsBits?: number;
+}
+```
+
+<ParamField path="password" type="string" required>
+  The encryption password (must be at least 32 characters)
+</ParamField>
+
+<ParamField path="algorithm" type="string">
+  The encryption algorithm. Defaults to "AES-CBC".
+</ParamField>
+
+<ParamField path="integrityAlgorithm" type="string">
+  The HMAC signature algorithm. Defaults to "SHA-256".
+</ParamField>
+
+<ParamField path="ivBits" type="number">
+  Number of bits for the initialization vector. Defaults to 128.
+</ParamField>
+
+<ParamField path="keyBits" type="number">
+  Number of bits for the encryption key. Defaults to 256.
+</ParamField>
+
+<ParamField path="saltsBits" type="number">
+  Number of bits for the salt. Defaults to 256.
+</ParamField>
+
+## Common use cases
+
+### Express.js middleware
+
+```typescript
+import { parseCookieHeader } from "@temelj/request";
+import type { Request, Response, NextFunction } from "express";
+
+function cookieParser(req: Request, res: Response, next: NextFunction) {
+  const header = req.headers.cookie;
+  if (header) {
+    req.cookies = parseCookieHeader(header).reduce(
+      (acc, cookie) => ({ ...acc, [cookie.name]: cookie.value }),
+      {} as Record<string, string>
+    );
+  }
+  next();
+}
+```
+
+### Secure session cookies
+
+```typescript
+import { serializeEncryptedCookie } from "@temelj/request";
+
+async function setSecureSession(userId: string): Promise<string> {
+  return await serializeEncryptedCookie(
+    {
+      name: "session",
+      value: userId,
+      path: "/",
+      httpOnly: true,
+      secure: true,
+      sameSite: "strict",
+      maxAge: 86400 // 24 hours
+    },
+    {
+      password: process.env.COOKIE_SECRET!
+    }
+  );
+}
+```
+
+### Cookie management
+
+```typescript
+import { Cookie, serializeCookie } from "@temelj/request";
+
+class CookieManager {
+  private cookies = new Map<string, Cookie>();
+
+  set(name: string, value: string, options: Partial<Cookie> = {}) {
+    this.cookies.set(name, { name, value, ...options });
+  }
+
+  delete(name: string) {
+    this.cookies.set(name, {
+      name,
+      value: "",
+      maxAge: 0
+    });
+  }
+
+  serialize(): string[] {
+    return Array.from(this.cookies.values()).map(serializeCookie);
+  }
+}
+```

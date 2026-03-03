@@ -1,0 +1,556 @@
+---
+title: "@temelj/color"
+description: "Comprehensive color manipulation library supporting RGB, HSL, Hex, Lab, and OKLCH color spaces"
+---
+
+A powerful color manipulation library with support for multiple color spaces, conversions, accessibility calculations, and color transformations.
+
+## Installation
+
+```bash
+npm install @temelj/color
+```
+
+## Color types
+
+The library uses a consistent RGB color type as the primary representation.
+
+```typescript
+interface Color {
+  red: number;    // 0-255
+  green: number;  // 0-255
+  blue: number;   // 0-255
+  alpha?: number; // 0-1 (optional)
+}
+
+interface HslColor {
+  hue: number;        // 0-360
+  saturation: number; // 0-1
+  lightness: number;  // 0-1
+  alpha?: number;     // 0-1 (optional)
+}
+
+interface LabColor {
+  l: number;          // 0-100
+  a: number;          // -128 to 127
+  b: number;          // -128 to 127
+  alpha?: number;     // 0-1 (optional)
+}
+
+interface OkLchColor {
+  l: number;          // 0-1
+  c: number;          // 0+
+  h: number;          // 0-360
+  alpha?: number;     // 0-1 (optional)
+}
+```
+
+## RGB operations
+
+### fromRgb
+
+Creates a color from RGB values.
+
+```typescript
+function fromRgb(red: number, green: number, blue: number, alpha?: number): Color
+```
+
+```typescript
+import { fromRgb } from "@temelj/color";
+
+const red = fromRgb(255, 0, 0);
+const blue = fromRgb(0, 0, 255, 0.5); // With alpha
+```
+
+### parseRgb
+
+Parses a CSS rgb/rgba color string.
+
+```typescript
+function parseRgb(value: string): Color | undefined
+```
+
+```typescript
+import { parseRgb } from "@temelj/color";
+
+parseRgb("rgb(255, 0, 0)");          // { red: 255, green: 0, blue: 0 }
+parseRgb("rgba(0, 128, 255, 0.5)");  // { red: 0, green: 128, blue: 255, alpha: 0.5 }
+parseRgb("invalid");                  // undefined
+```
+
+### toRgbString / toRgbaString
+
+Converts a color to CSS rgb/rgba string.
+
+```typescript
+function toRgbString(color: Color): string
+function toRgbaString(color: Color): string
+```
+
+```typescript
+import { fromRgb, toRgbString, toRgbaString } from "@temelj/color";
+
+const color = fromRgb(255, 128, 64, 0.8);
+
+toRgbString(color);   // "rgb(255, 128, 64)"
+toRgbaString(color);  // "rgba(255, 128, 64, 0.8)"
+```
+
+### isValidRgb
+
+Validates an RGB color.
+
+```typescript
+function isValidRgb(color: Color): boolean
+```
+
+```typescript
+import { isValidRgb, fromRgb } from "@temelj/color";
+
+isValidRgb(fromRgb(255, 128, 64));     // true
+isValidRgb(fromRgb(300, 128, 64));     // false (out of range)
+isValidRgb(fromRgb(255, 128, 64, 2));  // false (invalid alpha)
+```
+
+## Hex operations
+
+### parseHex
+
+Parses a hex color string.
+
+```typescript
+function parseHex(value: string): Color | undefined
+```
+
+<CodeGroup>
+```typescript Basic usage
+import { parseHex } from "@temelj/color";
+
+parseHex("#FF00FF");    // { red: 255, green: 0, blue: 255 }
+parseHex("FF00FF");     // { red: 255, green: 0, blue: 255 }
+parseHex("#FF00FFFF");  // { red: 255, green: 0, blue: 255, alpha: 1.0 }
+```
+
+```typescript Invalid input
+import { parseHex } from "@temelj/color";
+
+parseHex("");          // undefined
+parseHex("#FF");       // undefined
+parseHex("#GGGGGG");   // undefined (invalid hex)
+```
+</CodeGroup>
+
+### toHex / toHexHash
+
+Converts a color to hex format.
+
+```typescript
+function toHex(color: Color): string
+function toHexHash(color: Color): string
+```
+
+```typescript
+import { fromRgb, toHex, toHexHash } from "@temelj/color";
+
+const color = fromRgb(255, 0, 255);
+
+toHex(color);      // "ff00ff"
+toHexHash(color);  // "#ff00ff"
+
+const withAlpha = fromRgb(255, 0, 255, 0.5);
+toHexHash(withAlpha); // "#ff00ff80"
+```
+
+## HSL operations
+
+### fromHsl
+
+Creates an HSL color.
+
+```typescript
+function fromHsl(hue: number, saturation: number, lightness: number, alpha?: number): HslColor
+```
+
+```typescript
+import { fromHsl } from "@temelj/color";
+
+const red = fromHsl(0, 1, 0.5);      // Pure red
+const blue = fromHsl(240, 1, 0.5);   // Pure blue
+```
+
+### hslToRgb / rgbToHsl
+
+Converts between HSL and RGB color spaces.
+
+```typescript
+function hslToRgb(color: HslColor): Color
+function rgbToHsl(color: Color): HslColor
+```
+
+<CodeGroup>
+```typescript HSL to RGB
+import { fromHsl, hslToRgb } from "@temelj/color";
+
+const hsl = fromHsl(120, 1, 0.5);  // Green
+const rgb = hslToRgb(hsl);
+// { red: 0, green: 255, blue: 0 }
+```
+
+```typescript RGB to HSL
+import { fromRgb, rgbToHsl } from "@temelj/color";
+
+const rgb = fromRgb(255, 0, 0);  // Red
+const hsl = rgbToHsl(rgb);
+// { hue: 0, saturation: 1, lightness: 0.5 }
+```
+</CodeGroup>
+
+### toHslString / toHslaString
+
+Converts to CSS hsl/hsla string.
+
+```typescript
+function toHslString(color: HslColor): string
+function toHslaString(color: HslColor): string
+```
+
+```typescript
+import { fromHsl, toHslString } from "@temelj/color";
+
+const color = fromHsl(240, 1, 0.5, 0.8);
+
+toHslString(color);   // "hsl(240, 100%, 50%)"
+toHslaString(color);  // "hsla(240, 100%, 50%, 0.8)"
+```
+
+### normalizeHsl / isValidHsl
+
+Validates and normalizes HSL colors.
+
+```typescript
+function normalizeHsl(color: HslColor): HslColor
+function isValidHsl(color: HslColor): boolean
+```
+
+```typescript
+import { fromHsl, normalizeHsl } from "@temelj/color";
+
+const color = fromHsl(370, 1.5, -0.2);
+const normalized = normalizeHsl(color);
+// { hue: 10, saturation: 1, lightness: 0 }
+```
+
+## Lab and OKLCH
+
+Lab and OKLCH color spaces provide perceptually uniform color manipulation.
+
+### rgbToLab / labToRgb
+
+Converts between RGB and Lab color spaces.
+
+```typescript
+function rgbToLab(color: Color): LabColor
+function labToRgb(color: LabColor): Color
+```
+
+```typescript
+import { fromRgb, rgbToLab, labToRgb } from "@temelj/color";
+
+const rgb = fromRgb(255, 0, 0);
+const lab = rgbToLab(rgb);
+const backToRgb = labToRgb(lab);
+```
+
+### OKLCH conversions
+
+OKLCH is a modern perceptually uniform color space.
+
+```typescript
+function rgbToOkLch(color: Color): OkLchColor
+function okLchToRgb(color: OkLchColor): Color
+```
+
+```typescript
+import { fromRgb, rgbToOkLch, okLchToRgb } from "@temelj/color";
+
+const rgb = fromRgb(100, 150, 200);
+const oklch = rgbToOkLch(rgb);
+const backToRgb = okLchToRgb(oklch);
+```
+
+<Note>
+  OKLCH is ideal for generating color palettes and ensuring perceptually uniform color transitions.
+</Note>
+
+## Color manipulation
+
+### mix
+
+Mixes two colors together.
+
+```typescript
+function mix(a: Color, b: Color, weight?: number): Color
+```
+
+```typescript
+import { fromRgb, mix } from "@temelj/color";
+
+const red = fromRgb(255, 0, 0);
+const blue = fromRgb(0, 0, 255);
+
+mix(red, blue);      // 50/50 mix (purple)
+mix(red, blue, 0.8); // 80% red, 20% blue
+mix(red, blue, 0.2); // 20% red, 80% blue
+```
+
+### lighten / darken
+
+Adjusts the lightness of a color.
+
+```typescript
+function lighten(color: Color, amount: number): Color
+function darken(color: Color, amount: number): Color
+```
+
+<CodeGroup>
+```typescript Lighten
+import { fromRgb, lighten } from "@temelj/color";
+
+const color = fromRgb(100, 50, 150);
+
+lighten(color, 0.1);  // Slightly lighter
+lighten(color, 0.3);  // Much lighter
+```
+
+```typescript Darken
+import { fromRgb, darken } from "@temelj/color";
+
+const color = fromRgb(200, 150, 100);
+
+darken(color, 0.1);  // Slightly darker
+darken(color, 0.5);  // Much darker
+```
+</CodeGroup>
+
+### saturate / desaturate
+
+Adjusts the saturation of a color.
+
+```typescript
+function saturate(color: Color, amount: number): Color
+function desaturate(color: Color, amount: number): Color
+```
+
+```typescript
+import { fromRgb, saturate, desaturate } from "@temelj/color";
+
+const color = fromRgb(150, 100, 100);
+
+saturate(color, 0.2);    // More vibrant
+desaturate(color, 0.2);  // More muted
+```
+
+### grayscale
+
+Converts a color to grayscale.
+
+```typescript
+function grayscale(color: Color): Color
+```
+
+```typescript
+import { fromRgb, grayscale } from "@temelj/color";
+
+const color = fromRgb(255, 100, 50);
+const gray = grayscale(color);
+// Fully desaturated version
+```
+
+## Accessibility
+
+### getLuminance
+
+Calculates relative luminance according to WCAG 2.0.
+
+```typescript
+function getLuminance(color: Color): number
+```
+
+```typescript
+import { fromRgb, getLuminance } from "@temelj/color";
+
+const white = fromRgb(255, 255, 255);
+const black = fromRgb(0, 0, 0);
+
+getLuminance(white); // 1.0
+getLuminance(black); // 0.0
+```
+
+### getContrastRatio
+
+Calculates the contrast ratio between two colors.
+
+```typescript
+function getContrastRatio(a: Color, b: Color): number
+```
+
+```typescript
+import { fromRgb, getContrastRatio } from "@temelj/color";
+
+const white = fromRgb(255, 255, 255);
+const black = fromRgb(0, 0, 0);
+const darkGray = fromRgb(64, 64, 64);
+
+getContrastRatio(white, black);    // 21 (maximum)
+getContrastRatio(white, darkGray); // ~9.6
+```
+
+<Accordion title="WCAG contrast requirements">
+  - **AA (normal text)**: 4.5:1 minimum
+  - **AA (large text)**: 3:1 minimum
+  - **AAA (normal text)**: 7:1 minimum
+  - **AAA (large text)**: 4.5:1 minimum
+</Accordion>
+
+## Interpolation
+
+### lerpRgb / lerpHsl
+
+Interpolates between two colors.
+
+```typescript
+function lerpRgb(a: Color, b: Color, t: number): Color
+function lerpHsl(a: HslColor, b: HslColor, t: number): HslColor
+```
+
+<CodeGroup>
+```typescript RGB interpolation
+import { fromRgb, lerpRgb } from "@temelj/color";
+
+const red = fromRgb(255, 0, 0);
+const blue = fromRgb(0, 0, 255);
+
+lerpRgb(red, blue, 0);    // Pure red
+lerpRgb(red, blue, 0.5);  // Purple
+lerpRgb(red, blue, 1);    // Pure blue
+```
+
+```typescript HSL interpolation
+import { fromHsl, lerpHsl } from "@temelj/color";
+
+const red = fromHsl(0, 1, 0.5);
+const blue = fromHsl(240, 1, 0.5);
+
+lerpHsl(red, blue, 0.5);
+// Smooth hue transition
+```
+</CodeGroup>
+
+<Warning>
+  RGB interpolation can produce dull colors in the middle range. For better results, consider interpolating in Lab or OKLCH color spaces.
+</Warning>
+
+## Examples
+
+<Tabs>
+  <Tab title="Color palette generator">
+    ```typescript
+    import { fromRgb, lighten, darken } from "@temelj/color";
+
+    function generatePalette(base: Color) {
+      return {
+        50: lighten(base, 0.4),
+        100: lighten(base, 0.3),
+        200: lighten(base, 0.2),
+        300: lighten(base, 0.1),
+        400: base,
+        500: darken(base, 0.1),
+        600: darken(base, 0.2),
+        700: darken(base, 0.3),
+        800: darken(base, 0.4),
+        900: darken(base, 0.5)
+      };
+    }
+
+    const blue = fromRgb(59, 130, 246);
+    const palette = generatePalette(blue);
+    ```
+  </Tab>
+
+  <Tab title="Accessible text color">
+    ```typescript
+    import { fromRgb, getContrastRatio } from "@temelj/color";
+
+    function getAccessibleTextColor(background: Color): Color {
+      const white = fromRgb(255, 255, 255);
+      const black = fromRgb(0, 0, 0);
+
+      const whiteContrast = getContrastRatio(background, white);
+      const blackContrast = getContrastRatio(background, black);
+
+      // Return color with better contrast
+      return whiteContrast > blackContrast ? white : black;
+    }
+
+    const bgColor = fromRgb(100, 150, 200);
+    const textColor = getAccessibleTextColor(bgColor);
+    ```
+  </Tab>
+
+  <Tab title="Theme colors">
+    ```typescript
+    import { parseHex, lighten, darken, saturate } from "@temelj/color";
+
+    interface ThemeColors {
+      primary: Color;
+      primaryLight: Color;
+      primaryDark: Color;
+      accent: Color;
+    }
+
+    function createTheme(primaryHex: string): ThemeColors {
+      const primary = parseHex(primaryHex)!;
+      
+      return {
+        primary,
+        primaryLight: lighten(primary, 0.2),
+        primaryDark: darken(primary, 0.2),
+        accent: saturate(lighten(primary, 0.1), 0.2)
+      };
+    }
+
+    const theme = createTheme("#3B82F6");
+    ```
+  </Tab>
+
+  <Tab title="Color gradient">
+    ```typescript
+    import { fromRgb, lerpRgb, toHexHash } from "@temelj/color";
+
+    function generateGradient(
+      start: Color,
+      end: Color,
+      steps: number
+    ): string[] {
+      const colors: string[] = [];
+      
+      for (let i = 0; i < steps; i++) {
+        const t = i / (steps - 1);
+        const color = lerpRgb(start, end, t);
+        colors.push(toHexHash(color));
+      }
+      
+      return colors;
+    }
+
+    const red = fromRgb(255, 0, 0);
+    const blue = fromRgb(0, 0, 255);
+    const gradient = generateGradient(red, blue, 5);
+    // ["#ff0000", "#bf003f", "#7f007f", "#3f00bf", "#0000ff"]
+    ```
+  </Tab>
+</Tabs>
+
+<Tip>
+  For design systems, use OKLCH color space for generating palettes to ensure perceptually uniform color steps.
+</Tip>

@@ -1,0 +1,295 @@
+---
+title: Result operations
+description: Functions for creating and manipulating Result values
+---
+
+## ok
+
+Creates a success Result.
+
+<ParamField path="value" type="T" required>
+  The success value to wrap
+</ParamField>
+
+<ResponseField name="return" type="ResultOk<T>">
+  A success Result containing the value
+</ResponseField>
+
+### Example
+
+```typescript
+import { ok } from "@temelj/result";
+
+const result = ok(42);
+console.log(result); // { kind: "ok", value: 42 }
+```
+
+## err
+
+Creates an error Result.
+
+<ParamField path="error" type="E" required>
+  The error value to wrap
+</ParamField>
+
+<ResponseField name="return" type="ResultErr<E>">
+  An error Result containing the error
+</ResponseField>
+
+### Example
+
+```typescript
+import { err } from "@temelj/result";
+
+const result = err("Invalid input");
+console.log(result); // { kind: "error", error: "Invalid input" }
+```
+
+## isOk
+
+Type guard that checks if a Result is a success.
+
+<ParamField path="result" type="Result<T, E>" required>
+  The Result to check
+</ParamField>
+
+<ResponseField name="return" type="result is ResultOk<T>">
+  True if the Result is a success, false otherwise
+</ResponseField>
+
+### Example
+
+```typescript
+import { ok, isOk } from "@temelj/result";
+
+const result = ok(42);
+if (isOk(result)) {
+  console.log(result.value); // TypeScript knows result.value exists
+}
+```
+
+## isErr
+
+Type guard that checks if a Result is an error.
+
+<ParamField path="result" type="Result<T, E>" required>
+  The Result to check
+</ParamField>
+
+<ResponseField name="return" type="result is ResultErr<E>">
+  True if the Result is an error, false otherwise
+</ResponseField>
+
+### Example
+
+```typescript
+import { err, isErr } from "@temelj/result";
+
+const result = err("Failed");
+if (isErr(result)) {
+  console.log(result.error); // TypeScript knows result.error exists
+}
+```
+
+## unwrap
+
+Extracts the success value from a Result or throws the error.
+
+<ParamField path="result" type="Result<T, E>" required>
+  The Result to unwrap
+</ParamField>
+
+<ResponseField name="return" type="T">
+  The success value if the Result is Ok
+</ResponseField>
+
+<ResponseField name="throws" type="E">
+  Throws the error value if the Result is Err
+</ResponseField>
+
+### Example
+
+```typescript
+import { ok, err, unwrap } from "@temelj/result";
+
+const success = ok(42);
+console.log(unwrap(success)); // 42
+
+const failure = err("Invalid");
+unwrap(failure); // Throws "Invalid"
+```
+
+## unwrapErr
+
+Extracts the error value from a Result or throws an error.
+
+<ParamField path="result" type="Result<T, E>" required>
+  The Result to unwrap
+</ParamField>
+
+<ResponseField name="return" type="E">
+  The error value if the Result is Err
+</ResponseField>
+
+<ResponseField name="throws" type="Error">
+  Throws an Error if the Result is Ok
+</ResponseField>
+
+### Example
+
+```typescript
+import { err, unwrapErr } from "@temelj/result";
+
+const failure = err("Invalid input");
+console.log(unwrapErr(failure)); // "Invalid input"
+```
+
+## unwrapOr
+
+Extracts the success value from a Result or returns a default value.
+
+<ParamField path="result" type="Result<T, E>" required>
+  The Result to unwrap
+</ParamField>
+
+<ParamField path="defaultValue" type="T | (() => T)" required>
+  The default value to return if the Result is an error. Can be a value or a function that returns a value.
+</ParamField>
+
+<ResponseField name="return" type="T">
+  The success value if Ok, otherwise the default value
+</ResponseField>
+
+### Example
+
+```typescript
+import { ok, err, unwrapOr } from "@temelj/result";
+
+const success = ok(42);
+console.log(unwrapOr(success, 0)); // 42
+
+const failure = err("Invalid");
+console.log(unwrapOr(failure, 0)); // 0
+
+// With a function
+console.log(unwrapOr(failure, () => Math.random())); // Random number
+```
+
+## map
+
+Maps the success value of a Result to a new value.
+
+<ParamField path="result" type="Result<T, E>" required>
+  The Result to map
+</ParamField>
+
+<ParamField path="fn" type="(value: T) => U" required>
+  Function to transform the success value
+</ParamField>
+
+<ResponseField name="return" type="Result<U, E>">
+  A new Result with the transformed value, or the original error
+</ResponseField>
+
+### Example
+
+```typescript
+import { ok, err, map } from "@temelj/result";
+
+const result = ok(5);
+const doubled = map(result, (x) => x * 2);
+console.log(doubled); // { kind: "ok", value: 10 }
+
+const error = err("Invalid");
+const mapped = map(error, (x) => x * 2);
+console.log(mapped); // { kind: "error", error: "Invalid" }
+```
+
+## mapErr
+
+Maps the error value of a Result to a new error value.
+
+<ParamField path="result" type="Result<any, E>" required>
+  The Result to map
+</ParamField>
+
+<ParamField path="fn" type="(error: E) => F" required>
+  Function to transform the error value
+</ParamField>
+
+<ResponseField name="return" type="Result<any, F>">
+  A new Result with the transformed error, or the original success value
+</ResponseField>
+
+### Example
+
+```typescript
+import { err, mapErr } from "@temelj/result";
+
+const result = err("failed");
+const mapped = mapErr(result, (e) => e.toUpperCase());
+console.log(mapped); // { kind: "error", error: "FAILED" }
+```
+
+## fromThrowable
+
+Calls a function that may throw and returns a Result.
+
+<ParamField path="fn" type="() => T" required>
+  The synchronous function to execute
+</ParamField>
+
+<ParamField path="onErr" type="(e: unknown) => E">
+  Optional function to convert the unknown thrown value to type E
+</ParamField>
+
+<ResponseField name="return" type="Result<T, E | unknown>">
+  A Result containing either the function's return value or the caught error
+</ResponseField>
+
+### Example
+
+```typescript
+import { fromThrowable } from "@temelj/result";
+
+const result = fromThrowable(() => {
+  return JSON.parse("{invalid json}");
+});
+
+const withErrorMapping = fromThrowable(
+  () => JSON.parse("{invalid}"),
+  (e) => `Parse error: ${e}`
+);
+```
+
+## fromPromise
+
+Calls a function that returns a Promise and returns a Promise\<Result\>.
+
+<ParamField path="fn" type="() => Promise<T>" required>
+  The async function to execute
+</ParamField>
+
+<ParamField path="onErr" type="(e: unknown) => E">
+  Optional function to convert the unknown rejection reason to type E
+</ParamField>
+
+<ResponseField name="return" type="Promise<Result<T, E | unknown>>">
+  A Promise of a Result containing either the resolved value or the caught error
+</ResponseField>
+
+### Example
+
+```typescript
+import { fromPromise } from "@temelj/result";
+
+const result = await fromPromise(async () => {
+  const response = await fetch("/api/data");
+  return response.json();
+});
+
+const withErrorMapping = await fromPromise(
+  async () => fetch("/api/data").then((r) => r.json()),
+  (e) => `Network error: ${e}`
+);
+```

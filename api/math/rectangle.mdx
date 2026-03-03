@@ -1,0 +1,263 @@
+---
+title: Rectangle
+description: Rectangle operations for bounding box calculations and collision detection
+---
+
+## Overview
+
+The Rectangle API provides utilities for working with axis-aligned rectangles defined by a position and size. All operations are immutable and return new rectangle instances.
+
+## Types
+
+### Rectangle
+
+Represents an axis-aligned rectangle in 2D space.
+
+```typescript
+interface Rectangle {
+  position: Vector2;
+  size: Vector2;
+}
+```
+
+<ParamField path="position" type="Vector2" required>
+  The top-left corner of the rectangle
+</ParamField>
+
+<ParamField path="size" type="Vector2" required>
+  The width (x) and height (y) of the rectangle
+</ParamField>
+
+## Constructor functions
+
+### of
+
+Creates a rectangle from a position vector and size vector.
+
+```typescript
+rectangle.of(position: Vector2, size: Vector2): Rectangle
+```
+
+<ParamField path="position" type="Vector2" required>
+  The top-left corner position
+</ParamField>
+
+<ParamField path="size" type="Vector2" required>
+  The width and height as a vector
+</ParamField>
+
+<ResponseField name="result" type="Rectangle">
+  A new rectangle with the specified position and size
+</ResponseField>
+
+**Example:**
+
+```typescript
+import { rectangle, vector2 } from "@temelj/math";
+
+const rect = rectangle.of(
+  vector2.of(10, 20),
+  vector2.of(100, 50)
+);
+console.log(rect);
+// { position: { x: 10, y: 20 }, size: { x: 100, y: 50 } }
+```
+
+### ofBounds
+
+Creates a rectangle from explicit x, y, width, and height values.
+
+```typescript
+rectangle.ofBounds(x: number, y: number, width: number, height: number): Rectangle
+```
+
+<ParamField path="x" type="number" required>
+  The x coordinate of the top-left corner
+</ParamField>
+
+<ParamField path="y" type="number" required>
+  The y coordinate of the top-left corner
+</ParamField>
+
+<ParamField path="width" type="number" required>
+  The width of the rectangle
+</ParamField>
+
+<ParamField path="height" type="number" required>
+  The height of the rectangle
+</ParamField>
+
+<ResponseField name="result" type="Rectangle">
+  A new rectangle with the specified bounds
+</ResponseField>
+
+**Example:**
+
+```typescript
+const rect = rectangle.ofBounds(10, 20, 100, 50);
+console.log(rect);
+// { position: { x: 10, y: 20 }, size: { x: 100, y: 50 } }
+```
+
+### fromDOM
+
+Converts a browser DOMRect to a Rectangle.
+
+```typescript
+rectangle.fromDOM(rect: DOMRect): Rectangle
+```
+
+<ParamField path="rect" type="DOMRect" required>
+  The DOMRect to convert (e.g., from `element.getBoundingClientRect()`)
+</ParamField>
+
+<ResponseField name="result" type="Rectangle">
+  A new rectangle with the DOMRect's bounds
+</ResponseField>
+
+**Example:**
+
+```typescript
+const element = document.getElementById("myElement");
+const domRect = element.getBoundingClientRect();
+const rect = rectangle.fromDOM(domRect);
+```
+
+## Operations
+
+### expand
+
+Expands rectangle `a` to include rectangle `b`, creating a bounding box.
+
+```typescript
+rectangle.expand(a: Rectangle, b: Rectangle): Rectangle
+```
+
+<ParamField path="a" type="Rectangle" required>
+  The first rectangle
+</ParamField>
+
+<ParamField path="b" type="Rectangle" required>
+  The rectangle to include in the bounds
+</ParamField>
+
+<ResponseField name="result" type="Rectangle">
+  A new rectangle that encompasses both input rectangles
+</ResponseField>
+
+**Example:**
+
+```typescript
+const rect1 = rectangle.ofBounds(0, 0, 50, 50);
+const rect2 = rectangle.ofBounds(40, 40, 60, 60);
+const expanded = rectangle.expand(rect1, rect2);
+console.log(expanded);
+// { position: { x: 0, y: 0 }, size: { x: 100, y: 100 } }
+```
+
+### center
+
+Calculates the center point of a rectangle.
+
+```typescript
+rectangle.center(r: Rectangle): Vector2
+```
+
+<ParamField path="r" type="Rectangle" required>
+  The rectangle to find the center of
+</ParamField>
+
+<ResponseField name="result" type="Vector2">
+  The center point of the rectangle
+</ResponseField>
+
+**Example:**
+
+```typescript
+const rect = rectangle.ofBounds(0, 0, 100, 50);
+const centerPoint = rectangle.center(rect);
+console.log(centerPoint); // { x: 50, y: 25 }
+```
+
+### overlaps
+
+Checks if two rectangles overlap or intersect.
+
+```typescript
+rectangle.overlaps(a: Rectangle, b: Rectangle): boolean
+```
+
+<ParamField path="a" type="Rectangle" required>
+  The first rectangle
+</ParamField>
+
+<ParamField path="b" type="Rectangle" required>
+  The second rectangle
+</ParamField>
+
+<ResponseField name="result" type="boolean">
+  True if the rectangles overlap, false otherwise
+</ResponseField>
+
+**Example:**
+
+```typescript
+const rect1 = rectangle.ofBounds(0, 0, 50, 50);
+const rect2 = rectangle.ofBounds(40, 40, 60, 60);
+const rect3 = rectangle.ofBounds(100, 100, 50, 50);
+
+console.log(rectangle.overlaps(rect1, rect2)); // true
+console.log(rectangle.overlaps(rect1, rect3)); // false
+```
+
+### displayString
+
+Converts a rectangle to a readable string representation.
+
+```typescript
+rectangle.displayString(r: Rectangle): string
+```
+
+<ParamField path="r" type="Rectangle" required>
+  The rectangle to convert
+</ParamField>
+
+<ResponseField name="result" type="string">
+  A formatted string representation
+</ResponseField>
+
+**Example:**
+
+```typescript
+const rect = rectangle.ofBounds(10, 20, 100, 50);
+console.log(rectangle.displayString(rect));
+// "Rectangle(10, 20, 100, 50)"
+```
+
+## Common use cases
+
+### Collision detection
+
+```typescript
+function checkCollision(player: Rectangle, enemy: Rectangle): boolean {
+  return rectangle.overlaps(player, enemy);
+}
+```
+
+### Bounding multiple elements
+
+```typescript
+function getBoundingBox(elements: Rectangle[]): Rectangle {
+  return elements.reduce((acc, rect) => 
+    rectangle.expand(acc, rect)
+  );
+}
+```
+
+### Converting DOM elements
+
+```typescript
+function getElementRectangle(element: HTMLElement): Rectangle {
+  return rectangle.fromDOM(element.getBoundingClientRect());
+}
+```

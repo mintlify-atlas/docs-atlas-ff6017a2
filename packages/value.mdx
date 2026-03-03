@@ -1,0 +1,511 @@
+---
+title: "@temelj/value"
+description: "Value checking and manipulation utilities for TypeScript"
+---
+
+The `@temelj/value` package provides utilities for checking value types, deep equality comparison, and record/object manipulation in TypeScript.
+
+## Installation
+
+```bash
+npm install @temelj/value
+```
+
+## Type checking
+
+### isValuePrimitive
+
+Checks if a value is a JavaScript primitive.
+
+```typescript
+function isValuePrimitive(value: unknown): value is Primitive
+```
+
+```typescript
+import { isValuePrimitive } from "@temelj/value";
+
+console.log(isValuePrimitive("hello")); // true
+console.log(isValuePrimitive(42)); // true
+console.log(isValuePrimitive(true)); // true
+console.log(isValuePrimitive(null)); // true
+console.log(isValuePrimitive(undefined)); // true
+console.log(isValuePrimitive(Symbol("id"))); // true
+console.log(isValuePrimitive(BigInt(123))); // true
+
+console.log(isValuePrimitive({})); // false
+console.log(isValuePrimitive([])); // false
+console.log(isValuePrimitive(new Date())); // false
+```
+
+### isObjectPrimitive
+
+Checks if a value is a plain object (created with `{}` or `Object.create(null)`).
+
+```typescript
+function isObjectPrimitive(obj: unknown): obj is PrimitiveObject
+```
+
+```typescript
+import { isObjectPrimitive } from "@temelj/value";
+
+console.log(isObjectPrimitive({})); // true
+console.log(isObjectPrimitive({ a: 1 })); // true
+console.log(isObjectPrimitive(Object.create(null))); // true
+
+console.log(isObjectPrimitive([])); // false
+console.log(isObjectPrimitive(new Date())); // false
+console.log(isObjectPrimitive(new Map())); // false
+console.log(isObjectPrimitive("string")); // false
+```
+
+### isObjectDeepPrimitive
+
+Checks if a value is a plain object with only primitive values (recursively).
+
+```typescript
+function isObjectDeepPrimitive(obj: unknown): obj is PrimitiveObject
+```
+
+```typescript
+import { isObjectDeepPrimitive } from "@temelj/value";
+
+console.log(isObjectDeepPrimitive({ a: 1, b: "text" })); // true
+console.log(isObjectDeepPrimitive({ a: 1, b: { c: 2 } })); // true
+
+console.log(isObjectDeepPrimitive({ a: new Date() })); // false
+console.log(isObjectDeepPrimitive({ a: [1, 2] })); // false
+```
+
+### isPrimitiveValue
+
+Checks if a value is either a primitive or a deeply primitive object.
+
+```typescript
+function isPrimitiveValue(value: unknown): value is PrimitiveValue
+```
+
+```typescript
+import { isPrimitiveValue } from "@temelj/value";
+
+console.log(isPrimitiveValue(42)); // true
+console.log(isPrimitiveValue("hello")); // true
+console.log(isPrimitiveValue({ a: 1 })); // true
+console.log(isPrimitiveValue([1, 2, 3])); // true
+
+console.log(isPrimitiveValue(new Date())); // false
+console.log(isPrimitiveValue({ a: new Map() })); // false
+```
+
+## Value operations
+
+### deepEquals
+
+Compares two values for deep equality.
+
+```typescript
+function deepEquals(a: unknown, b: unknown): boolean
+```
+
+<CodeGroup>
+```typescript Primitives
+import { deepEquals } from "@temelj/value";
+
+console.log(deepEquals(42, 42)); // true
+console.log(deepEquals("hello", "hello")); // true
+console.log(deepEquals(null, null)); // true
+console.log(deepEquals(42, "42")); // false
+```
+
+```typescript Objects
+import { deepEquals } from "@temelj/value";
+
+const obj1 = { a: 1, b: { c: 2 } };
+const obj2 = { a: 1, b: { c: 2 } };
+const obj3 = { a: 1, b: { c: 3 } };
+
+console.log(deepEquals(obj1, obj2)); // true
+console.log(deepEquals(obj1, obj3)); // false
+```
+
+```typescript Arrays
+import { deepEquals } from "@temelj/value";
+
+console.log(deepEquals([1, 2, 3], [1, 2, 3])); // true
+console.log(deepEquals([1, [2, 3]], [1, [2, 3]])); // true
+console.log(deepEquals([1, 2], [1, 2, 3])); // false
+```
+
+```typescript Complex structures
+import { deepEquals } from "@temelj/value";
+
+const a = {
+  users: [
+    { id: 1, name: "Alice" },
+    { id: 2, name: "Bob" },
+  ],
+  settings: { theme: "dark" },
+};
+
+const b = {
+  users: [
+    { id: 1, name: "Alice" },
+    { id: 2, name: "Bob" },
+  ],
+  settings: { theme: "dark" },
+};
+
+console.log(deepEquals(a, b)); // true
+```
+</CodeGroup>
+
+<Note>
+`deepEquals` uses the `react-fast-compare` library internally, which provides efficient deep comparison while handling edge cases correctly.
+</Note>
+
+### primitivize
+
+Converts a value to a primitive value. Maps and Sets are converted to objects and arrays respectively.
+
+```typescript
+function primitivize(value: unknown): PrimitiveValue
+```
+
+<CodeGroup>
+```typescript Map to object
+import { primitivize } from "@temelj/value";
+
+const map = new Map([
+  ["name", "Alice"],
+  ["age", 30],
+]);
+
+const result = primitivize(map);
+// Result: { "name": "Alice", "age": 30 }
+```
+
+```typescript Set to array
+import { primitivize } from "@temelj/value";
+
+const set = new Set([1, 2, 3]);
+
+const result = primitivize(set);
+// Result: [1, 2, 3]
+```
+
+```typescript Nested structures
+import { primitivize } from "@temelj/value";
+
+const complex = {
+  data: new Map([
+    ["items", new Set([1, 2, 3])],
+    ["count", 3],
+  ]),
+};
+
+const result = primitivize(complex);
+// Result: { data: { "items": [1, 2, 3], "count": 3 } }
+```
+</CodeGroup>
+
+<Warning>
+`primitivize` throws an error if it encounters a non-primitive value that cannot be converted (like class instances, functions, etc.).
+</Warning>
+
+## Record operations
+
+### recordEquals
+
+Compares two records for equality.
+
+```typescript
+function recordEquals<V>(
+  a: Record<string, V>,
+  b: Record<string, V>,
+  compare?: (a: V, b: V) => boolean,
+): boolean
+```
+
+<CodeGroup>
+```typescript Basic comparison
+import { recordEquals } from "@temelj/value";
+
+const a = { x: 1, y: 2 };
+const b = { x: 1, y: 2 };
+const c = { x: 1, y: 3 };
+
+console.log(recordEquals(a, b)); // true
+console.log(recordEquals(a, c)); // false
+```
+
+```typescript Custom comparison
+import { recordEquals } from "@temelj/value";
+
+const a = { name: "Alice", age: 30 };
+const b = { name: "alice", age: 30 };
+
+const equal = recordEquals(
+  a,
+  b,
+  (av, bv) => {
+    if (typeof av === "string" && typeof bv === "string") {
+      return av.toLowerCase() === bv.toLowerCase();
+    }
+    return av === bv;
+  }
+);
+// Result: true (case-insensitive name comparison)
+```
+</CodeGroup>
+
+### recordIsEmpty
+
+Checks if a record has no keys.
+
+```typescript
+function recordIsEmpty<V>(value: Record<string, V>): boolean
+```
+
+```typescript
+import { recordIsEmpty } from "@temelj/value";
+
+console.log(recordIsEmpty({})); // true
+console.log(recordIsEmpty({ a: 1 })); // false
+```
+
+### recordMerge
+
+Merges multiple records into a single record using deep merge.
+
+```typescript
+function recordMerge<T>(
+  values: Partial<T>[],
+  options?: RecordMergeOptions,
+): T
+```
+
+<Accordion title="RecordMergeOptions interface">
+```typescript
+interface RecordMergeOptions {
+  clone?: boolean;
+  arrayMerge?: <T, S>(target: T[], source: S[]) => (T & S)[];
+  isMergable?: (value: unknown) => boolean;
+}
+```
+</Accordion>
+
+<CodeGroup>
+```typescript Basic merge
+import { recordMerge } from "@temelj/value";
+
+const defaults = { port: 3000, host: "localhost" };
+const config = { port: 8080 };
+
+const merged = recordMerge([defaults, config]);
+// Result: { port: 8080, host: "localhost" }
+```
+
+```typescript Deep merge
+import { recordMerge } from "@temelj/value";
+
+const base = {
+  server: { port: 3000, host: "localhost" },
+  features: { auth: true },
+};
+
+const override = {
+  server: { port: 8080 },
+  features: { logging: true },
+};
+
+const merged = recordMerge([base, override]);
+// Result: {
+//   server: { port: 8080, host: "localhost" },
+//   features: { auth: true, logging: true }
+// }
+```
+
+```typescript Custom array merge
+import { recordMerge } from "@temelj/value";
+
+const a = { items: [1, 2] };
+const b = { items: [3, 4] };
+
+const merged = recordMerge([a, b], {
+  arrayMerge: (target, source) => [...target, ...source],
+});
+// Result: { items: [1, 2, 3, 4] }
+```
+</CodeGroup>
+
+<Note>
+`recordMerge` uses the `deepmerge` library internally, providing flexible deep merging with customizable behavior.
+</Note>
+
+## Type definitions
+
+### Primitive
+
+A JavaScript value that is not an object and has no methods or properties.
+
+```typescript
+type Primitive =
+  | string
+  | boolean
+  | number
+  | bigint
+  | symbol
+  | null
+  | undefined
+```
+
+### PrimitiveObject
+
+A plain JavaScript object with primitive values.
+
+```typescript
+type PrimitiveObject = { [key: string]: PrimitiveValue }
+```
+
+### PrimitiveValue
+
+A value that is either a primitive, a primitive object, or an array of primitive values.
+
+```typescript
+type PrimitiveValue =
+  | Primitive
+  | PrimitiveObject
+  | Array<PrimitiveValue>
+```
+
+### JsonValue
+
+A valid JSON value.
+
+```typescript
+type JsonValue =
+  | string
+  | number
+  | boolean
+  | null
+  | JsonObject
+  | Array<JsonValue>
+
+type JsonObject = { [key: string]: JsonValue }
+```
+
+### Constructor
+
+A constructor function type.
+
+```typescript
+type Constructor<T> = new (...args: unknown[]) => T
+```
+
+## Practical examples
+
+### Configuration merging
+
+```typescript
+import { recordMerge } from "@temelj/value";
+
+interface AppConfig {
+  server: {
+    port: number;
+    host: string;
+  };
+  database: {
+    url: string;
+    poolSize: number;
+  };
+  features: {
+    auth: boolean;
+    logging: boolean;
+  };
+}
+
+const defaultConfig: AppConfig = {
+  server: { port: 3000, host: "localhost" },
+  database: { url: "postgresql://localhost", poolSize: 10 },
+  features: { auth: true, logging: false },
+};
+
+const envConfig: Partial<AppConfig> = {
+  server: { port: parseInt(process.env.PORT || "8080") },
+  features: { logging: true },
+};
+
+const finalConfig = recordMerge<AppConfig>([defaultConfig, envConfig]);
+```
+
+### Comparing complex objects
+
+```typescript
+import { deepEquals } from "@temelj/value";
+
+function hasUserChanged(oldUser: User, newUser: User): boolean {
+  return !deepEquals(oldUser, newUser);
+}
+
+const user1 = {
+  id: 1,
+  profile: { name: "Alice", preferences: { theme: "dark" } },
+  permissions: ["read", "write"],
+};
+
+const user2 = {
+  id: 1,
+  profile: { name: "Alice", preferences: { theme: "light" } },
+  permissions: ["read", "write"],
+};
+
+if (hasUserChanged(user1, user2)) {
+  console.log("User has been modified");
+}
+```
+
+### Type-safe value validation
+
+```typescript
+import { isPrimitiveValue, isObjectPrimitive } from "@temelj/value";
+
+function validateApiResponse(data: unknown): boolean {
+  if (!isObjectPrimitive(data)) {
+    console.error("Response is not a plain object");
+    return false;
+  }
+
+  for (const [key, value] of Object.entries(data)) {
+    if (!isPrimitiveValue(value)) {
+      console.error(`Invalid value for key "${key}": not serializable`);
+      return false;
+    }
+  }
+
+  return true;
+}
+```
+
+### Serialization helper
+
+```typescript
+import { primitivize } from "@temelj/value";
+
+function serializeForStorage(data: unknown): string {
+  const primitive = primitivize(data);
+  return JSON.stringify(primitive);
+}
+
+const data = {
+  users: new Map([
+    ["1", { name: "Alice", roles: new Set(["admin", "user"]) }],
+    ["2", { name: "Bob", roles: new Set(["user"]) }],
+  ]),
+};
+
+const json = serializeForStorage(data);
+// JSON string with Maps and Sets converted to objects/arrays
+```
+
+<Tip>
+The `@temelj/value` package is particularly useful when working with configuration objects, API responses, and state management where deep comparison and merging are common operations.
+</Tip>

@@ -1,0 +1,187 @@
+---
+title: Color manipulation functions
+description: Functions for mixing and adjusting colors
+---
+
+## mix
+
+Mixes two colors together.
+
+<ParamField path="a" type="Color" required>
+  The first color
+</ParamField>
+
+<ParamField path="b" type="Color" required>
+  The second color
+</ParamField>
+
+<ParamField path="weight" type="number" default="0.5">
+  The weight of the first color in the range [0, 1]
+</ParamField>
+
+<ResponseField name="return" type="Color">
+  The mixed color
+</ResponseField>
+
+### Example
+
+```typescript
+import { fromRgb, mix } from "@temelj/color";
+
+const red = fromRgb(255, 0, 0);
+const blue = fromRgb(0, 0, 255);
+
+// 50/50 mix
+const purple = mix(red, blue);
+console.log(purple); // { red: 127.5, green: 0, blue: 127.5 }
+
+// 75% red, 25% blue
+const reddish = mix(red, blue, 0.75);
+console.log(reddish); // { red: 191.25, green: 0, blue: 63.75 }
+```
+
+## lighten
+
+Lightens a color by increasing its lightness.
+
+<ParamField path="color" type="Color" required>
+  The color to lighten
+</ParamField>
+
+<ParamField path="amount" type="number" required>
+  The amount to lighten by in the range [0, 1]
+</ParamField>
+
+<ResponseField name="return" type="Color">
+  The lightened color
+</ResponseField>
+
+### Example
+
+```typescript
+import { fromRgb, lighten } from "@temelj/color";
+
+const blue = fromRgb(0, 0, 200);
+const lightBlue = lighten(blue, 0.2);
+
+console.log(lightBlue);
+// Color is 20% lighter
+```
+
+## darken
+
+Darkens a color by decreasing its lightness.
+
+<ParamField path="color" type="Color" required>
+  The color to darken
+</ParamField>
+
+<ParamField path="amount" type="number" required>
+  The amount to darken by in the range [0, 1]
+</ParamField>
+
+<ResponseField name="return" type="Color">
+  The darkened color
+</ResponseField>
+
+### Example
+
+```typescript
+import { fromRgb, darken } from "@temelj/color";
+
+const yellow = fromRgb(255, 255, 0);
+const darkYellow = darken(yellow, 0.3);
+
+console.log(darkYellow);
+// Color is 30% darker
+```
+
+## saturate
+
+Saturates a color by increasing its saturation.
+
+<ParamField path="color" type="Color" required>
+  The color to saturate
+</ParamField>
+
+<ParamField path="amount" type="number" required>
+  The amount to saturate by in the range [0, 1]
+</ParamField>
+
+<ResponseField name="return" type="Color">
+  The saturated color
+</ResponseField>
+
+### Example
+
+```typescript
+import { fromRgb, saturate } from "@temelj/color";
+
+const paleBlue = fromRgb(150, 180, 200);
+const vibrantBlue = saturate(paleBlue, 0.4);
+
+console.log(vibrantBlue);
+// Color is more vibrant/saturated
+```
+
+## desaturate
+
+Desaturates a color by decreasing its saturation.
+
+<ParamField path="color" type="Color" required>
+  The color to desaturate
+</ParamField>
+
+<ParamField path="amount" type="number" required>
+  The amount to desaturate by in the range [0, 1]
+</ParamField>
+
+<ResponseField name="return" type="Color">
+  The desaturated color
+</ResponseField>
+
+### Example
+
+```typescript
+import { fromRgb, desaturate } from "@temelj/color";
+
+const vibrantRed = fromRgb(255, 0, 0);
+const mutedRed = desaturate(vibrantRed, 0.5);
+
+console.log(mutedRed);
+// Color is more muted/less saturated
+```
+
+## grayscale
+
+Converts a color to grayscale by removing all saturation.
+
+<ParamField path="color" type="Color" required>
+  The color to convert to grayscale
+</ParamField>
+
+<ResponseField name="return" type="Color">
+  The grayscale color
+</ResponseField>
+
+### Example
+
+```typescript
+import { fromRgb, grayscale } from "@temelj/color";
+
+const red = fromRgb(255, 0, 0);
+const gray = grayscale(red);
+
+console.log(gray);
+// Color has no saturation, only lightness remains
+
+// Useful for accessibility testing or print previews
+const colors = [
+  fromRgb(255, 0, 0),
+  fromRgb(0, 255, 0),
+  fromRgb(0, 0, 255),
+];
+
+const grayPalette = colors.map(grayscale);
+console.log(grayPalette);
+```

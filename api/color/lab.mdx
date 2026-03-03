@@ -1,0 +1,106 @@
+---
+title: LAB color space
+description: Functions for working with LAB colors
+---
+
+## Types
+
+### LabColor
+
+Represents a LAB color.
+
+<ResponseField name="l" type="number" required>
+  Lightness component (0-100)
+</ResponseField>
+
+<ResponseField name="a" type="number" required>
+  Green-red component
+</ResponseField>
+
+<ResponseField name="b" type="number" required>
+  Blue-yellow component
+</ResponseField>
+
+<ResponseField name="alpha" type="number">
+  The alpha channel value (0-1). Optional.
+</ResponseField>
+
+## rgbToLab
+
+Converts an RGB color to a LAB color.
+
+<ParamField path="color" type="Color" required>
+  The RGB color to convert
+</ParamField>
+
+<ResponseField name="return" type="LabColor">
+  The LAB color
+</ResponseField>
+
+### Example
+
+```typescript
+import { fromRgb, rgbToLab } from "@temelj/color";
+
+const rgb = fromRgb(255, 0, 0); // Pure red
+const lab = rgbToLab(rgb);
+console.log(lab);
+// { l: 53.23..., a: 80.10..., b: 67.22... }
+```
+
+## labToRgb
+
+Converts a LAB color to an RGB color.
+
+<ParamField path="color" type="LabColor" required>
+  The LAB color to convert
+</ParamField>
+
+<ResponseField name="return" type="Color">
+  The RGB color
+</ResponseField>
+
+### Example
+
+```typescript
+import { labToRgb } from "@temelj/color";
+
+const lab = { l: 53.23, a: 80.10, b: 67.22 };
+const rgb = labToRgb(lab);
+console.log(rgb); // Approximately { red: 255, green: 0, blue: 0 }
+```
+
+## About LAB color space
+
+The LAB color space is designed to be perceptually uniform, meaning that the same amount of numerical change corresponds to about the same amount of visually perceived change. This makes it ideal for:
+
+- Measuring color differences
+- Color interpolation
+- Image processing
+- Accessibility calculations
+
+The components are:
+- **L**: Lightness from 0 (black) to 100 (white)
+- **a**: Green (negative) to red (positive)
+- **b**: Blue (negative) to yellow (positive)
+
+### Example
+
+```typescript
+import { fromRgb, rgbToLab } from "@temelj/color";
+
+// Convert multiple colors to LAB for comparison
+const red = rgbToLab(fromRgb(255, 0, 0));
+const green = rgbToLab(fromRgb(0, 255, 0));
+const blue = rgbToLab(fromRgb(0, 0, 255));
+
+// Calculate perceptual distance (Delta E)
+function deltaE(lab1: LabColor, lab2: LabColor): number {
+  const dL = lab2.l - lab1.l;
+  const da = lab2.a - lab1.a;
+  const db = lab2.b - lab1.b;
+  return Math.sqrt(dL * dL + da * da + db * db);
+}
+
+console.log(deltaE(red, green)); // Perceptual distance
+```

@@ -1,0 +1,366 @@
+---
+title: ID generation
+description: ULID and UUID v4 generation and validation utilities
+---
+
+## Overview
+
+The ID module provides functions for generating and validating ULIDs (Universally Unique Lexicographically Sortable Identifiers) and UUID v4 identifiers.
+
+## ULID
+
+### generateUlid
+
+Generates a new ULID string.
+
+```typescript
+function generateUlid(options?: UlidOptions): string
+```
+
+<ParamField path="options" type="UlidOptions">
+  Optional configuration for ULID generation
+</ParamField>
+
+<ResponseField name="result" type="string">
+  A 26-character ULID string (Crockford's base32 encoded)
+</ResponseField>
+
+**Example:**
+
+```typescript
+import { generateUlid } from "@temelj/id";
+
+const id = generateUlid();
+console.log(id); // "01ARZ3NDEKTSV4RRFFQ69G5FAV"
+
+// Generate with specific timestamp
+const id2 = generateUlid({ time: new Date("2024-01-01") });
+```
+
+### generateUlidList
+
+Generates multiple ULIDs in a monotonically increasing sequence.
+
+```typescript
+function generateUlidList(count: number, options?: UlidOptions): string[]
+```
+
+<ParamField path="count" type="number" required>
+  The number of ULIDs to generate
+</ParamField>
+
+<ParamField path="options" type="UlidOptions">
+  Optional configuration (cannot include custom random bytes)
+</ParamField>
+
+<ResponseField name="result" type="string[]">
+  Array of ULID strings in monotonically increasing order
+</ResponseField>
+
+**Behavior:**
+
+When generating ULIDs within the same millisecond, the random component is incremented by 1 bit in the least significant bit position (with carrying) to ensure strict monotonicity.
+
+**Example:**
+
+```typescript
+import { generateUlidList } from "@temelj/id";
+
+const ids = generateUlidList(5);
+console.log(ids);
+// [
+//   "01BX5ZZKBKACTAV9WEVGEMMVRZ",
+//   "01BX5ZZKBKACTAV9WEVGEMMVS0",
+//   "01BX5ZZKBKACTAV9WEVGEMMVS1",
+//   ...
+// ]
+```
+
+### isUlidValid
+
+Checks if a string is a valid ULID.
+
+```typescript
+function isUlidValid(id: string): boolean
+```
+
+<ParamField path="id" type="string" required>
+  The string to validate
+</ParamField>
+
+<ResponseField name="result" type="boolean">
+  True if the string is a valid ULID, false otherwise
+</ResponseField>
+
+**Example:**
+
+```typescript
+import { isUlidValid } from "@temelj/id";
+
+console.log(isUlidValid("01ARZ3NDEKTSV4RRFFQ69G5FAV")); // true
+console.log(isUlidValid("invalid-id"));                 // false
+console.log(isUlidValid(""));                           // false
+```
+
+### getUlidBytes
+
+Converts a ULID string to its byte array representation.
+
+```typescript
+function getUlidBytes(id: string): Uint8Array
+```
+
+<ParamField path="id" type="string" required>
+  The ULID string to convert
+</ParamField>
+
+<ResponseField name="result" type="Uint8Array">
+  16-byte array representation of the ULID
+</ResponseField>
+
+**Example:**
+
+```typescript
+import { getUlidBytes } from "@temelj/id";
+
+const id = "01ARZ3NDEKTSV4RRFFQ69G5FAV";
+const bytes = getUlidBytes(id);
+console.log(bytes); // Uint8Array(16) [ ... ]
+```
+
+### makeUlidFromBytes
+
+Constructs a ULID string from a byte array.
+
+```typescript
+function makeUlidFromBytes(bytes: Uint8Array): string
+```
+
+<ParamField path="bytes" type="Uint8Array" required>
+  16-byte array to convert to ULID
+</ParamField>
+
+<ResponseField name="result" type="string">
+  The ULID string representation
+</ResponseField>
+
+**Example:**
+
+```typescript
+import { makeUlidFromBytes, getUlidBytes } from "@temelj/id";
+
+const originalId = "01ARZ3NDEKTSV4RRFFQ69G5FAV";
+const bytes = getUlidBytes(originalId);
+const reconstructedId = makeUlidFromBytes(bytes);
+console.log(reconstructedId === originalId); // true
+```
+
+### UlidOptions
+
+Options for ULID generation.
+
+```typescript
+interface UlidOptions {
+  time?: Date;
+  random?: Uint8Array;
+}
+```
+
+<ParamField path="time" type="Date">
+  The timestamp to use for generating the ULID. Defaults to current time.
+</ParamField>
+
+<ParamField path="random" type="Uint8Array">
+  Custom random bytes (must be exactly 10 bytes). Cannot be used with `generateUlidList`.
+</ParamField>
+
+## UUID v4
+
+### generateUuid4
+
+Generates a new UUID v4 string.
+
+```typescript
+function generateUuid4(): string
+```
+
+<ResponseField name="result" type="string">
+  A 36-character UUID v4 string in lowercase
+</ResponseField>
+
+**Example:**
+
+```typescript
+import { generateUuid4 } from "@temelj/id";
+
+const id = generateUuid4();
+console.log(id); // "f47ac10b-58cc-4372-a567-0e02b2c3d479"
+```
+
+### isUuid4Valid
+
+Checks if a string is a valid UUID v4.
+
+```typescript
+function isUuid4Valid(id: string): boolean
+```
+
+<ParamField path="id" type="string" required>
+  The string to validate
+</ParamField>
+
+<ResponseField name="result" type="boolean">
+  True if the string is a valid UUID v4, false otherwise
+</ResponseField>
+
+**Example:**
+
+```typescript
+import { isUuid4Valid } from "@temelj/id";
+
+console.log(isUuid4Valid("f47ac10b-58cc-4372-a567-0e02b2c3d479")); // true
+console.log(isUuid4Valid("invalid-uuid"));                        // false
+```
+
+### getUuid4Bytes
+
+Converts a UUID v4 string to its byte array representation.
+
+```typescript
+function getUuid4Bytes(id: string): Uint8Array
+```
+
+<ParamField path="id" type="string" required>
+  The UUID v4 string to convert
+</ParamField>
+
+<ResponseField name="result" type="Uint8Array">
+  16-byte array representation of the UUID
+</ResponseField>
+
+**Example:**
+
+```typescript
+import { getUuid4Bytes } from "@temelj/id";
+
+const id = "f47ac10b-58cc-4372-a567-0e02b2c3d479";
+const bytes = getUuid4Bytes(id);
+console.log(bytes); // Uint8Array(16) [ ... ]
+```
+
+### makeUuid4FromBytes
+
+Constructs a UUID v4 string from a byte array.
+
+```typescript
+function makeUuid4FromBytes(bytes: Uint8Array): string
+```
+
+<ParamField path="bytes" type="Uint8Array" required>
+  16-byte array to convert to UUID v4
+</ParamField>
+
+<ResponseField name="result" type="string">
+  The UUID v4 string representation in lowercase
+</ResponseField>
+
+**Example:**
+
+```typescript
+import { makeUuid4FromBytes, getUuid4Bytes } from "@temelj/id";
+
+const originalId = "f47ac10b-58cc-4372-a567-0e02b2c3d479";
+const bytes = getUuid4Bytes(originalId);
+const reconstructedId = makeUuid4FromBytes(bytes);
+console.log(reconstructedId === originalId); // true
+```
+
+## Constants
+
+### UUID4_MIN
+
+Minimum valid UUID v4 value.
+
+```typescript
+const UUID4_MIN: string = "00000000-0000-4000-8000-000000000000";
+```
+
+### UUID4_MAX
+
+Maximum valid UUID v4 value.
+
+```typescript
+const UUID4_MAX: string = "ffffffff-ffff-4fff-bfff-ffffffffffff";
+```
+
+### UUID4_LENGTH
+
+Length of a UUID v4 string including hyphens.
+
+```typescript
+const UUID4_LENGTH: number = 36;
+```
+
+## ULID vs UUID v4
+
+**Use ULID when:**
+- You need sortable IDs by creation time
+- You want better database index performance
+- You need shorter string representation (26 vs 36 characters)
+- You want monotonic ordering within the same millisecond
+
+**Use UUID v4 when:**
+- You need compatibility with existing systems expecting UUIDs
+- Random distribution is preferred over sortability
+- Standards compliance is required
+
+## Common use cases
+
+### Database primary keys
+
+```typescript
+import { generateUlid } from "@temelj/id";
+
+interface User {
+  id: string;
+  name: string;
+}
+
+function createUser(name: string): User {
+  return {
+    id: generateUlid(),
+    name
+  };
+}
+```
+
+### Request tracing
+
+```typescript
+import { generateUuid4 } from "@temelj/id";
+
+function traceRequest(handler: () => void) {
+  const requestId = generateUuid4();
+  console.log(`[${requestId}] Starting request`);
+  try {
+    handler();
+    console.log(`[${requestId}] Request completed`);
+  } catch (error) {
+    console.error(`[${requestId}] Request failed:`, error);
+  }
+}
+```
+
+### Batch ID generation
+
+```typescript
+import { generateUlidList } from "@temelj/id";
+
+function createBatchRecords(count: number) {
+  const ids = generateUlidList(count);
+  return ids.map((id, index) => ({
+    id,
+    position: index
+  }));
+}
+```
